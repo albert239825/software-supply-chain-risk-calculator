@@ -5,6 +5,8 @@ from typing import Any
 
 from concurrent.futures import ThreadPoolExecutor
 
+from tqdm import tqdm
+
 from .utils import CsvWriter, HttpSession, parse_github_owner_repo, thread_local_http_session
 
 
@@ -17,30 +19,32 @@ def iter_npms_packages(session: HttpSession, limit: int) -> list[dict[str, Any]]
     rows: list[dict[str, Any]] = []
     page = 0
     page_size = min(100, max(1, limit))
-    while len(rows) < limit:
-        url = f"{NPMS_SEARCH}?q=not:deprecated&size={page_size}&from={page * page_size}"
-        data = session.get_json(url)
-        results = data.get("results") or []
-        if not results:
-            break
-        for item in results:
-            pkg = item.get("package") or {}
-            name = pkg.get("name")
-            if not name:
-                continue
-            rows.append(
-                {
-                    "ecosystem": "npm",
-                    "name": name,
-                    "description": ((pkg.get("description") or "")[:2000]),
-                    "latest_version": (pkg.get("version") or ""),
-                }
-            )
-            if len(rows) >= limit:
+    with tqdm(total=limit, desc="npm: npms.io seeds", unit="pkg") as pbar:
+        while len(rows) < limit:
+            url = f"{NPMS_SEARCH}?q=not:deprecated&size={page_size}&from={page * page_size}"
+            data = session.get_json(url)
+            results = data.get("results") or []
+            if not results:
                 break
-        page += 1
-        if len(results) < page_size:
-            break
+            for item in results:
+                pkg = item.get("package") or {}
+                name = pkg.get("name")
+                if not name:
+                    continue
+                rows.append(
+                    {
+                        "ecosystem": "npm",
+                        "name": name,
+                        "description": ((pkg.get("description") or "")[:2000]),
+                        "latest_version": (pkg.get("version") or ""),
+                    }
+                )
+                pbar.update(1)
+                if len(rows) >= limit:
+                    break
+            page += 1
+            if len(results) < page_size:
+                break
     return rows[:limit]
 
 
@@ -153,15 +157,16 @@ def collect_npm_graph(
     seen_pkg: set[str] = set()
     q: deque[tuple[str, int]] = deque((n, 0) for n in seed_names)
 
-    print(f"Collecting NPM graph with {len(q)} seeds")
+    tqdm.write(f"Collecting NPM graph ({len(q)} seeds)")
     current_depth = -1
     request_queue = []
+    graph_pbar = tqdm(desc="npm: registry graph", unit="pkg", dynamic_ncols=True)
     while len(q) > 0 or len(request_queue) > 0:
         if len(q) > 0:
             name, depth = q.popleft()
             if depth > current_depth:
                 current_depth = depth
-                print(f"Collecting {len(q) + 1} packages in NPM graph at depth {current_depth}")
+                graph_pbar.set_postfix(depth=current_depth)
             if name in seen_pkg:
                 continue
             seen_pkg.add(name)
@@ -181,8 +186,10 @@ def collect_npm_graph(
                 for dep in batch_edges:
                     if dep["to_package"] not in seen_pkg:
                         q.append((dep["to_package"], depth + 1))
+                graph_pbar.update(len(request_queue))
                 request_queue = []
 
+    graph_pbar.close()
     return list(packages_rows.values()), version_rows, dep_edges, maint_rows
 
 def run_npm_collection(

@@ -5,6 +5,8 @@ from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
+from tqdm import tqdm
+
 from .utils import CsvWriter, HttpSession, parse_github_owner_repo, thread_local_http_session
 
 
@@ -16,26 +18,28 @@ def iter_hugovk_top_packages(session: HttpSession, limit: int) -> list[dict[str,
     """Top PyPI projects from hugovk list (used to pick top-N seed names)."""
     data = session.get_json(TOP_PYPI_JSON)
     rows_out: list[dict[str, Any]] = []
-    for row in data.get("rows") or []:
-        if isinstance(row, dict):
-            p = row.get("project")
-        elif isinstance(row, list) and len(row) >= 2:
-            p = row[1]
-        else:
-            continue
-        if not p or not isinstance(p, str):
-            continue
-        name = p.lower()
-        rows_out.append(
-            {
-                "ecosystem": "pypi",
-                "name": name,
-                "description": "",
-                "latest_version": "",
-            }
-        )
-        if len(rows_out) >= limit:
-            break
+    with tqdm(total=limit, desc="pypi: hugovk seed list", unit="pkg") as pbar:
+        for row in data.get("rows") or []:
+            if isinstance(row, dict):
+                p = row.get("project")
+            elif isinstance(row, list) and len(row) >= 2:
+                p = row[1]
+            else:
+                continue
+            if not p or not isinstance(p, str):
+                continue
+            name = p.lower()
+            rows_out.append(
+                {
+                    "ecosystem": "pypi",
+                    "name": name,
+                    "description": "",
+                    "latest_version": "",
+                }
+            )
+            pbar.update(1)
+            if len(rows_out) >= limit:
+                break
     return rows_out[:limit]
 
 
@@ -267,16 +271,17 @@ def collect_pypi_graph(
     seen_pkg: set[str] = set()
     q: deque[tuple[str, int]] = deque((n.lower(), 0) for n in seed_names)
 
-    print(f"Collecting PyPI graph with {len(q)} seeds")
+    tqdm.write(f"Collecting PyPI graph ({len(q)} seeds)")
     current_depth = -1
     request_queue: list[str] = []
+    graph_pbar = tqdm(desc="pypi: warehouse graph", unit="pkg", dynamic_ncols=True)
 
     while len(q) > 0 or len(request_queue) > 0:
         if len(q) > 0:
             name, depth = q.popleft()
             if depth > current_depth:
                 current_depth = depth
-                print(f"Collecting {len(q) + 1} packages in PyPI graph at depth {current_depth}")
+                graph_pbar.set_postfix(depth=current_depth)
             if name in seen_pkg:
                 continue
             seen_pkg.add(name)
@@ -297,8 +302,10 @@ def collect_pypi_graph(
                 for dep in batch_edges:
                     if dep["to_package"] not in seen_pkg:
                         q.append((dep["to_package"], depth + 1))
+                graph_pbar.update(len(request_queue))
                 request_queue = []
 
+    graph_pbar.close()
     return list(packages_rows.values()), version_rows, dep_edges, maint_rows
 
 
