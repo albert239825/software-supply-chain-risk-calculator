@@ -50,6 +50,22 @@ def main() -> int:
 
     ensure_dir(args.out)
     summary: dict[str, object] = {}
+    
+    output_files = [
+        "packages.csv",
+        "versions.csv",
+        "dependencies.csv",
+        "maintainers.csv",
+    ]
+    
+    # Delete all output_files in output directory
+    for filename in output_files:
+        file_path = args.out / filename
+        if file_path.exists():
+            try:
+                file_path.unlink()
+            except Exception as e:
+                print(f"Warning: Failed to delete {file_path}: {e}")
 
     if args.npm:
         summary["npm"] = run_npm_collection(args.out, top_n=args.top_n, max_workers=args.workers)

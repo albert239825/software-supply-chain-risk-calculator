@@ -30,7 +30,7 @@ def iter_hugovk_top_packages(session: HttpSession, limit: int) -> list[dict[str,
             {
                 "ecosystem": "pypi",
                 "name": name,
-                "summary": "",
+                "description": "",
                 "latest_version": "",
             }
         )
@@ -168,8 +168,9 @@ def _pypi_maintainer_rows(package_name: str, info: dict[str, Any]) -> list[dict[
                 {
                     "ecosystem": "pypi",
                     "package_name": package_name,
-                    "role": role,
+                    "username": "",
                     "name": person_name,
+                    "role": role,
                     "email": email,
                 }
             )
@@ -187,12 +188,12 @@ def process_pypi_package(name: str, payload: dict[str, Any]) -> tuple[dict[str, 
         return packages_row, version_row, dep_edges, maint_rows
 
     info = _info(payload)
-    summary = info.get("summary") or ""
+    description = info.get("summary") or ""
     latest = info.get("version") or ""
     packages_row = {
         "ecosystem": "pypi",
         "name": name,
-        "summary": (summary or "")[:2000],
+        "description": ((description or "").replace("\n", " ")[:2000]),
         "latest_version": latest,
     }
 
@@ -312,17 +313,17 @@ def run_pypi_collection(
     pkgs, vers, edges, maints = collect_pypi_graph(session, seed_names, max_workers=max_workers)
 
     CsvWriter.write_csv(
-        out_dir / "pypi_packages.csv",
-        ["ecosystem", "name", "summary", "latest_version"],
+        out_dir / "packages.csv",
+        ["ecosystem", "name", "description", "latest_version"],
         pkgs,
     )
     CsvWriter.write_csv(
-        out_dir / "pypi_versions.csv",
+        out_dir / "versions.csv",
         ["ecosystem", "package_name", "version", "released", "github_owner", "github_repo"],
         vers,
     )
     CsvWriter.write_csv(
-        out_dir / "pypi_dependencies.csv",
+        out_dir / "dependencies.csv",
         [
             "ecosystem",
             "from_package",
@@ -334,8 +335,8 @@ def run_pypi_collection(
         edges,
     )
     CsvWriter.write_csv(
-        out_dir / "pypi_maintainers.csv",
-        ["ecosystem", "package_name", "role", "name", "email"],
+        out_dir / "maintainers.csv",
+        ["ecosystem", "package_name", "username", "name", "role", "email"],
         maints,
     )
 

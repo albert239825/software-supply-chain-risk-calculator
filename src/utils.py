@@ -51,11 +51,31 @@ class CsvWriter:
                 w = csv.DictWriter(f, fieldnames=fieldnames)
                 w.writeheader()
             return
-        with path.open("w", newline="", encoding="utf-8") as f:
-            w = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
-            w.writeheader()
-            for row in rows:
-                w.writerow(row)
+
+        if path.exists():
+            try:
+                with path.open("r", newline="", encoding="utf-8") as f:
+                    reader = csv.reader(f)
+                    existing_header = next(reader, None)
+                header_matches = existing_header == fieldnames
+            except Exception:
+                header_matches = False
+        else:
+            header_matches = False
+
+        if header_matches:
+            # Append rows
+            with path.open("a", newline="", encoding="utf-8") as f:
+                w = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+                for row in rows:
+                    w.writerow(row)
+        else:
+            # Overwrite with new header and rows
+            with path.open("w", newline="", encoding="utf-8") as f:
+                w = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+                w.writeheader()
+                for row in rows:
+                    w.writerow(row)
 
 
 GITHUB_HOSTS = {"github.com", "www.github.com"}

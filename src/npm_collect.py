@@ -33,7 +33,6 @@ def iter_npms_packages(session: HttpSession, limit: int) -> list[dict[str, Any]]
                     "ecosystem": "npm",
                     "name": name,
                     "description": ((pkg.get("description") or "")[:2000]),
-                    "modified": (pkg.get("date") or ""),
                     "latest_version": (pkg.get("version") or ""),
                 }
             )
@@ -79,13 +78,11 @@ def process_registry_package(name: str, meta: dict[str, Any]) -> tuple[dict[str,
 
     latest = _latest_version(meta)
     desc = meta.get("description")
-    modified = meta.get("time", {}).get("modified") if isinstance(meta.get("time"), dict) else None
 
     packages_row = {
         "ecosystem": "npm",
         "name": name,
-        "description": (desc or "")[:2000],
-        "modified": modified or "",
+        "description": ((desc or "").replace("\n", " ")[:2000]),
         "latest_version": latest or "",
     }
 
@@ -96,6 +93,8 @@ def process_registry_package(name: str, meta: dict[str, Any]) -> tuple[dict[str,
                     "ecosystem": "npm",
                     "package_name": name,
                     "username": m.get("name") or "",
+                    "name": "",
+                    "role": "maintainer",
                     "email": m.get("email") or "",
                 }
             )
@@ -108,7 +107,7 @@ def process_registry_package(name: str, meta: dict[str, Any]) -> tuple[dict[str,
         "ecosystem": "npm",
         "package_name": name,
         "version": latest,
-        "published_at": t or "",
+        "released": t or "",
         "has_repository": bool(repo),
         "github_owner": gh[0] if gh else "",
         "github_repo": gh[1] if gh else "",
@@ -130,7 +129,7 @@ def process_registry_package(name: str, meta: dict[str, Any]) -> tuple[dict[str,
                     "from_package": name,
                     "from_version": latest,
                     "to_package": dep_name,
-                    "version_range": spec,
+                    "version_spec": spec,
                     "dep_kind": dep_type,
                 }
             )
@@ -197,17 +196,17 @@ def run_npm_collection(
     pkgs, vers, edges, maints = collect_npm_graph(session, seed_names, max_workers=max_workers)
 
     CsvWriter.write_csv(
-        out_dir / "npm_packages.csv",
-        ["ecosystem", "name", "description", "modified", "latest_version"],
+        out_dir / "packages.csv",
+        ["ecosystem", "name", "description", "latest_version"],
         pkgs,
     )
     CsvWriter.write_csv(
-        out_dir / "npm_versions.csv",
+        out_dir / "versions.csv",
         [
             "ecosystem",
             "package_name",
             "version",
-            "published_at",
+            "released",
             "has_repository",
             "github_owner",
             "github_repo",
@@ -215,20 +214,20 @@ def run_npm_collection(
         vers,
     )
     CsvWriter.write_csv(
-        out_dir / "npm_dependencies.csv",
+        out_dir / "dependencies.csv",
         [
             "ecosystem",
             "from_package",
             "from_version",
             "to_package",
-            "version_range",
+            "version_spec",
             "dep_kind",
         ],
         edges,
     )
     CsvWriter.write_csv(
-        out_dir / "npm_maintainers.csv",
-        ["ecosystem", "package_name", "username", "email"],
+        out_dir / "maintainers.csv",
+        ["ecosystem", "package_name", "username", "name", "role", "email"],
         maints,
     )
 
