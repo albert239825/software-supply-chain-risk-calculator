@@ -1,0 +1,9 @@
+name: cis5500
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.11
+  - pip
+  - pip:
+      - requests>=2.31.0
+      - python-dotenv>=1.0.0
