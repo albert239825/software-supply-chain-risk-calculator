@@ -1,3 +1,12 @@
+"""Collect npm supply-chain graph data for risk analysis.
+
+Uses npms.io search to pick non-deprecated seed packages, then walks the npm
+registry (prod, peer, and optional dependencies) in breadth-first order until
+the reachable graph is complete. Writes ``packages.csv``, ``versions.csv``,
+``dependencies.csv``, and ``maintainers.csv`` under the given output directory.
+
+Registry fetches use a thread pool; each worker uses a thread-local HTTP session.
+"""
 from __future__ import annotations
 
 from collections import deque
@@ -15,7 +24,11 @@ REGISTRY_PKG = "https://registry.npmjs.org/{name}"
 
 
 def iter_npms_packages(session: HttpSession, limit: int) -> list[dict[str, Any]]:
-    """npms search hits with package metadata (used to pick top-N seed names)."""
+    """Return up to ``limit`` non-deprecated packages from npms.io search (paginated).
+
+    Each row includes ecosystem, name, description, and latest_version for use as
+    BFS seeds and for ``packages.csv``-compatible seed metadata.
+    """
     rows: list[dict[str, Any]] = []
     page = 0
     page_size = min(100, max(1, limit))
@@ -60,6 +73,7 @@ def _version_doc(meta: dict[str, Any], version: str) -> dict[str, Any]:
 
 
 def fetch_registry_package(session: HttpSession, name: str) -> dict[str, Any] | None:
+    """GET full package metadata from registry.npmjs.org; return None on failure."""
     url = REGISTRY_PKG.format(name=name)
     try:
         return session.get_json(url)
@@ -72,6 +86,11 @@ def _fetch_registry_worker(package_name: str) -> dict[str, Any] | None:
 
 
 def process_registry_package(name: str, meta: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    """Turn registry JSON for one package into package, version, edge, and maintainer rows.
+
+    Uses the ``latest`` dist-tag only. Dependency edges include prod, peer, and
+    optional deps. Empty metadata yields empty structures.
+    """
     packages_row: dict[str, dict[str, Any]] = {}
     version_row: list[dict[str, Any]] = []
     dep_edges: list[dict[str, Any]] = []
@@ -145,9 +164,14 @@ def collect_npm_graph(
     seed_names: list[str],
     max_workers: int,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
-    """
-    BFS over dependency names (prod + peer + optional) until the frontier is empty.
-    Returns: packages_rows, version_rows, dep_edges, maintainer_rows
+    """Breadth-first expansion from ``seed_names`` over the dependency graph.
+
+    Visits each package name at most once. Batches registry GETs with
+    ``ThreadPoolExecutor``; ``session`` is reserved for callers that share it
+    elsewhere (workers use thread-local sessions).
+
+    Returns ``(packages_rows, version_rows, dep_edges, maintainer_rows)`` aligned
+    with the CSV schemas written by ``run_npm_collection``.
     """
     packages_rows: dict[str, dict[str, Any]] = {}
     version_rows: list[dict[str, Any]] = []
@@ -197,6 +221,11 @@ def run_npm_collection(
     top_n: int,
     max_workers: int,
 ) -> dict[str, Any]:
+    """End-to-end npm collection: npms seeds, full graph, write four CSVs.
+
+    ``top_n`` is the number of top search results used as BFS seeds. Returns
+    counts for seeds, packages, versions, edges, and maintainer rows.
+    """
     session = HttpSession()
     pkgs_npms = iter_npms_packages(session, limit=top_n)
     seed_names = [p["name"] for p in pkgs_npms]
