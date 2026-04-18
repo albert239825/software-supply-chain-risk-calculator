@@ -1,4 +1,47 @@
-# CIS 5500 — dependency graph data collection
+# Software Supply Chain Risk Scorer
+
+A web app that lets security teams explore the NPM package ecosystem via an interactive dependency graph and a composite risk score, backed by a normalized PostgreSQL database (Supabase) populated from the NPM registry.
+
+This repo has two pieces:
+
+1. **Python data collection** (`collect_data.py`, `src/`, `data/`) — the scraper that produces the raw and clean CSVs we load into Supabase.
+2. **Web application** (`web/`) — a Next.js 14+ App Router app (TypeScript, Tailwind, shadcn/ui, Supabase client) that consumes the data and serves the UI + API routes.
+
+See [`docs/PLAN.md`](docs/PLAN.md) for scope, milestones, and open decisions, and [`docs/api-spec.md`](docs/api-spec.md) for the v1 API contract.
+
+---
+
+## Web application (`web/`)
+
+Next.js 14+ App Router, TypeScript (strict), Tailwind CSS, shadcn/ui, and `@supabase/supabase-js`.
+
+```bash
+cd web
+npm install
+cp .env.example .env.local   # fill in your Supabase credentials
+npm run dev
+```
+
+Then open:
+
+- `http://localhost:3000` — landing page
+- `http://localhost:3000/api/health` — A8 liveness/readiness probe (returns `db: "unconfigured"` until Supabase credentials are set in `.env.local`)
+
+Supabase credentials live in `web/.env.local` (gitignored). See `web/.env.example` for the required variable names.
+
+Common scripts:
+
+| Script | Purpose |
+|---|---|
+| `npm run dev` | Next.js dev server on port 3000 |
+| `npm run build` | Production build |
+| `npm run start` | Serve the production build |
+| `npm run lint` | ESLint via `eslint-config-next` |
+| `npm run typecheck` | `tsc --noEmit` |
+
+---
+
+## Python data collection (`collect_data.py`)
 
 Fetches NPM and/or PyPI package metadata and dependency graphs in two stages:
 
@@ -7,7 +50,7 @@ Fetches NPM and/or PyPI package metadata and dependency graphs in two stages:
 
 `--out` (default `data`) is the only output root; the script creates `raw/` and `clean/` under it. One command runs collection and then the clean step.
 
-## Setup
+### Setup
 
 **Conda (recommended)**
 
@@ -23,7 +66,7 @@ python3 -m venv .venv && source .venv/bin/activate   # optional
 pip install -r requirements.txt
 ```
 
-## Run
+### Run
 
 ```bash
 python collect_data.py --npm --pypi
@@ -44,7 +87,7 @@ python collect_data.py --npm --top-n 200
 python collect_data.py --pypi --out ./artifacts
 ```
 
-## Output layout
+### Output layout
 
 **Raw (per run)** — under `<out>/raw/<run_id>/`:
 
@@ -63,7 +106,7 @@ NPM and PyPI no longer overwrite each other; each ecosystem writes to its own su
 | `maintainers_clean.csv` | Maintainer/author rows; `package_id` when the package exists. |
 | `manifest.json` | `run_id`, ecosystems, `top_n`, `workers`, raw/clean row counts, unresolved reference counts, paths. |
 
-### Schema (columns)
+#### Schema (columns)
 
 **`packages.csv`**
 
@@ -86,7 +129,7 @@ NPM and PyPI no longer overwrite each other; each ecosystem writes to its own su
 
 - `ecosystem`, `package_name`, `username`, `name`, `role`, `email`
 
-### Clean file schemas (normalized)
+#### Clean file schemas (normalized)
 
 Global rules: `ecosystem` lowercased; package names lowercased; PyPI names use `-` instead of `_`; strings trimmed; deterministic sort order; IDs are UUIDv5 strings in a fixed project namespace.
 

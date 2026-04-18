@@ -4,3 +4,9 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# web/ (Next.js)
+web/node_modules/
+web/.next/
+web/.env.local
+web/.env*.local
