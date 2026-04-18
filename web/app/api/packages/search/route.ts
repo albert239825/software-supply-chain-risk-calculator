@@ -31,10 +31,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   try {
     const client = createSupabaseServerClient();
-    const items = await searchPackagesByName(client, { q, ecosystem, limit });
+    const { items, total } = await searchPackagesByName(client, {
+      q,
+      ecosystem,
+      limit,
+    });
     const body: ListResponse<Package> = {
       items,
-      meta: { total: items.length, limit, offset: 0 },
+      meta: { total, limit, offset: 0 },
     };
     return NextResponse.json(body);
   } catch (err) {

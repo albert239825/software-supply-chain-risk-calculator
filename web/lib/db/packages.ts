@@ -25,15 +25,21 @@ export type SearchPackagesByNameArgs = {
  * A1 search helper. Case-insensitive substring match against `packages.name`,
  * limited to the given ecosystem. Results ordered by name ascending for a
  * stable autocomplete ordering.
+ *
+ * Returns both the page of rows and the ecosystem-wide `total` number of
+ * matching packages so A1 can populate `ListMeta.total` accurately. We use
+ * PostgREST's `count: 'exact'` head-piggyback (no `head: true` here, since
+ * we still need the row bodies) so the total comes back in a single round
+ * trip.
  */
 export async function searchPackagesByName(
   client: SupabaseClient,
   { q, ecosystem, limit }: SearchPackagesByNameArgs,
-): Promise<Package[]> {
+): Promise<{ items: Package[]; total: number }> {
   const pattern = `%${escapeLikePattern(q)}%`;
-  const { data, error } = await client
+  const { data, count, error } = await client
     .from("packages")
-    .select(PACKAGE_COLUMNS)
+    .select(PACKAGE_COLUMNS, { count: "exact" })
     .eq("ecosystem", ecosystem)
     .ilike("name", pattern)
     .order("name", { ascending: true })
@@ -41,7 +47,10 @@ export async function searchPackagesByName(
   if (error) {
     throw new Error(`searchPackagesByName failed: ${error.message}`);
   }
-  return (data ?? []) as Package[];
+  return {
+    items: (data ?? []) as Package[],
+    total: count ?? 0,
+  };
 }
 
 export type GetPackageByIdArgs = {
