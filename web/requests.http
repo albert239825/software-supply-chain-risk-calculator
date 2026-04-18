@@ -31,3 +31,23 @@ Accept: application/json
 # curl: curl -sS "$BASE/api/packages/search?q=react&limit=10&ecosystem=npm" | jq .
 GET {{baseUrl}}/api/packages/search?q=react&limit=10&ecosystem=npm
 Accept: application/json
+
+### R2 — top fan-out (packages with the most direct dependencies)
+# curl: curl -sS "$BASE/api/stats/top-fanout?limit=10&ecosystem=npm" | jq .
+GET {{baseUrl}}/api/stats/top-fanout?limit=10&ecosystem=npm
+Accept: application/json
+
+### R5 — most dependents (ecosystem blast-radius ranking)
+# curl: curl -sS "$BASE/api/stats/most-dependents?limit=10&ecosystem=npm" | jq .
+GET {{baseUrl}}/api/stats/most-dependents?limit=10&ecosystem=npm
+Accept: application/json
+
+### R6 — top maintainers (trust concentration)
+# curl: curl -sS "$BASE/api/maintainers/top?limit=10&ecosystem=npm" | jq .
+GET {{baseUrl}}/api/maintainers/top?limit=10&ecosystem=npm
+Accept: application/json
+
+### R10 — ranked composite risk (flagship Home-page list)
+# curl: curl -sS "$BASE/api/risk/ranked?limit=20&offset=0&ecosystem=npm" | jq .
+GET {{baseUrl}}/api/risk/ranked?limit=20&offset=0&ecosystem=npm
+Accept: application/json
