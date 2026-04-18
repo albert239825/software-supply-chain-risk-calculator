@@ -221,6 +221,7 @@ def process_pypi_package(name: str, payload: dict[str, Any]) -> tuple[dict[str, 
         "package_name": name,
         "version": latest,
         "released": released,
+        "has_repository": bool(gh),
         "github_owner": gh[0] if gh else "",
         "github_repo": gh[1] if gh else "",
     }
@@ -326,7 +327,7 @@ def run_pypi_collection(
     )
     CsvWriter.write_csv(
         out_dir / "versions.csv",
-        ["ecosystem", "package_name", "version", "released", "github_owner", "github_repo"],
+        ["ecosystem", "package_name", "version", "released", "has_repository", "github_owner", "github_repo"],
         vers,
     )
     CsvWriter.write_csv(
