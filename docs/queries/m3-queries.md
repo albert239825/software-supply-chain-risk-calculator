@@ -33,10 +33,13 @@ Complexity counts: **4 complex** (Q3, Q7, Q8, Q10) — meets the CIS 5500 rubric
 
 **Description:** Retrieves latest versions of a given package along with their release timestamps, ordered from most recent to oldest. Useful for identifying outdated or stagnant packages.
 
+> **Bind parameter:** the `:packageId` in `WHERE p.id = :packageId` is the package UUID supplied as a path parameter by route R1 (`/api/packages/:packageId/versions`); see `docs/api-spec.md`.
+
 ```sql
 SELECT p.name AS package_name, v.version, v.released
 FROM packages p
 JOIN versions v ON p.id = v.package_id
+WHERE p.id = :packageId
 ORDER BY v.released DESC;
 ```
 
@@ -72,12 +75,16 @@ LIMIT 10;
 
 **Description:** Recursive BFS traversal of the dependency graph from a given package version, capturing direct and transitive dependencies with their depth in the graph.
 
+> **Bind parameters:**
+> - `:packageId` — the starting-node version UUID, supplied as a path parameter by route R3 (`/api/packages/:packageId/graph`); see `docs/api-spec.md`.
+> - `:maxDepth` — maximum BFS depth (default 4, capped at 20); supplied as a query-string argument on route R3.
+
 ```sql
 WITH RECURSIVE bfs AS (
    SELECT
        0 AS depth,
-       ARRAY['0063402a-1335-5d56-b371-0ac3026e129d'::text] AS frontier,
-       ARRAY['0063402a-1335-5d56-b371-0ac3026e129d'::text] AS seen
+       ARRAY[:packageId::text] AS frontier,
+       ARRAY[:packageId::text] AS seen
    UNION ALL
    SELECT
        b.depth + 1,
@@ -97,7 +104,7 @@ WITH RECURSIVE bfs AS (
        WHERE NOT (v_next.id::text = ANY(b.seen))
    ) AS nxt
      ON cardinality(nxt.next_frontier) > 0
-   WHERE b.depth < 20
+   WHERE b.depth < :maxDepth
 ),
 dep_tree AS (
    SELECT
