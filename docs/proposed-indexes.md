@@ -90,15 +90,27 @@ Notes on the definition:
 ```sql
 -- PROPOSAL — consider only if I1 + I2 do not get Q5/Q10 under 1s.
 CREATE MATERIALIZED VIEW package_dep_stats AS
-SELECT p.id                               AS package_id,
-       COALESCE(COUNT(d_out.id), 0)       AS direct_fanout,   -- from latest version
-       COALESCE(COUNT(d_in.id),  0)       AS direct_fanin
+SELECT p.id                                AS package_id,
+       COALESCE(fanout.cnt, 0)             AS direct_fanout,   -- from latest version
+       COALESCE(fanin.cnt,  0)             AS direct_fanin
 FROM   packages p
-LEFT JOIN latest_versions lv       ON lv.package_id = p.id
-LEFT JOIN dependencies    d_out    ON d_out.from_version_id = lv.version_id
-LEFT JOIN dependencies    d_in     ON d_in.to_package_id    = p.id
-GROUP BY p.id;
+LEFT JOIN latest_versions lv ON lv.package_id = p.id
+LEFT JOIN LATERAL (
+    SELECT COUNT(*) AS cnt
+    FROM   dependencies d_out
+    WHERE  d_out.from_version_id = lv.version_id
+) fanout ON true
+LEFT JOIN LATERAL (
+    SELECT COUNT(*) AS cnt
+    FROM   dependencies d_in
+    WHERE  d_in.to_package_id = p.id
+) fanin ON true;
 ```
+
+Note: the previous sketch (pre-review) used two independent `LEFT JOIN`s on
+`dependencies` which produced a Cartesian product between outgoing and incoming
+edges, inflating both counts. The `LATERAL` subquery form above avoids that by
+computing each aggregate independently.
 
 **Refresh strategy.** Same cadence as MV1, refreshed *after* MV1 so it sees consistent "latest version" mappings.
 
