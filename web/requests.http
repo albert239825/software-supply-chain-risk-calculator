@@ -1,0 +1,33 @@
+# REST Client examples for the Supply Chain Risk Scorer API
+#
+# Purpose:
+#   This file is the interim verification mechanism in lieu of a UI during
+#   Phase 0 of the backend build-out. It lets reviewers and future sub-devins
+#   exercise the routes with no frontend in place.
+#
+# How to use:
+#   - VS Code: install the "REST Client" extension (humao.rest-client) and
+#     click "Send Request" above any `###`-delimited block.
+#   - Shell: `curl` equivalents are noted in comments for each block.
+#
+# Phase 1 sub-devins: when you add a new route under `web/app/api/**`,
+# append a new `###` block to this file with a representative GET example.
+# Keep one canonical example per route so reviewers have a single place
+# to test the full surface.
+
+@baseUrl = http://localhost:3000
+
+### A8 — health probe
+# curl: curl -sS "$BASE/api/health" | jq .
+GET {{baseUrl}}/api/health
+Accept: application/json
+
+### A7 — global counts (npm)
+# curl: curl -sS "$BASE/api/stats/counts?ecosystem=npm" | jq .
+GET {{baseUrl}}/api/stats/counts?ecosystem=npm
+Accept: application/json
+
+### A1 — package search
+# curl: curl -sS "$BASE/api/packages/search?q=react&limit=10&ecosystem=npm" | jq .
+GET {{baseUrl}}/api/packages/search?q=react&limit=10&ecosystem=npm
+Accept: application/json

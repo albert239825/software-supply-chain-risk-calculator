@@ -38,6 +38,34 @@ Common scripts:
 | `npm run start` | Serve the production build |
 | `npm run lint` | ESLint via `eslint-config-next` |
 | `npm run typecheck` | `tsc --noEmit` |
+| `npm run test` | Vitest unit tests (`vitest run`) |
+| `npm run test:watch` | Vitest in watch mode |
+
+### Exercising the backend routes
+
+Phase 0 ships three template routes end-to-end (contract in [`docs/api-spec.md`](docs/api-spec.md)):
+
+- **A1** `GET /api/packages/search?q=<name>&limit=<n>&ecosystem=<npm|pypi>`
+- **A7** `GET /api/stats/counts?ecosystem=<npm|pypi>`
+- **A8** `GET /api/health`
+
+To hit them against real data:
+
+```bash
+cd web
+cp .env.example .env.local          # fill in Supabase creds
+npm run dev                          # serves on http://localhost:3000
+```
+
+Then in another terminal:
+
+```bash
+curl -sS http://localhost:3000/api/health | jq .
+curl -sS "http://localhost:3000/api/stats/counts?ecosystem=npm" | jq .
+curl -sS "http://localhost:3000/api/packages/search?q=react&limit=10" | jq .
+```
+
+A VS Code / JetBrains "REST Client" file is also checked in at [`web/requests.http`](web/requests.http) — open it and click **Send Request** above any block. Phase 1 sub-devins append their routes to the same file.
 
 ---
 
