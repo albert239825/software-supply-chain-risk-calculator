@@ -2,8 +2,8 @@ import pool from '../../../../../lib/db';
 import { NextRequest } from 'next/server';
 
 // GET /api/packages/:packageId/graph?maxDepth=4
-export async function GET(req: NextRequest, { params }: { params: { packageId: string } }) {
-  const { packageId } = params;
+export async function GET(req: NextRequest, context: { params: Promise<{ packageId: string }> }) {
+  const { packageId } = await context.params;
   const { searchParams } = new URL(req.url);
   const maxDepth = parseInt(searchParams.get('maxDepth') || '4', 10);
   try {
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest, { params }: { params: { packageId: s
          FROM dep_tree
          ORDER BY to_package_id, dep_kind, depth
       )
-      SELECT max(g.depth) FROM graph g;
+      SELECT * FROM graph;
     `, [packageId, maxDepth]);
     return new Response(JSON.stringify(result.rows), { status: 200 });
   } catch (error: any) {
