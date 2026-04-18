@@ -24,6 +24,18 @@ export type PaginationParams = z.infer<typeof paginationSchema>;
 
 export const ecosystemSchema: ZodType<Ecosystem> = z.enum(["npm", "pypi"]).default("npm");
 
+/**
+ * Shared `depKind` validator for A4 and any future route that filters
+ * dependency rows by kind. `'all'` (the default) means "no filter" and is
+ * translated to "omit the `.eq('dep_kind', ...)` clause" inside the DB
+ * helper.
+ */
+export const depKindSchema = z
+  .enum(["dependency", "peer", "optional", "all"])
+  .default("all");
+
+export type DepKindParam = z.infer<typeof depKindSchema>;
+
 export type ParseQueryResult<T> =
   | { data: T; error?: undefined }
   | { data?: undefined; error: NextResponse };

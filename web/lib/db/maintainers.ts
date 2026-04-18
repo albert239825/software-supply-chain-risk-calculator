@@ -5,9 +5,12 @@ import type { Ecosystem, Maintainer, UUID } from "@/types/api";
 /**
  * Typed Supabase query helpers for the `maintainers` table.
  *
- * Phase 0 provides `countMaintainers`. `listMaintainersForPackage` is a
- * Phase 1 stub (backs A3).
+ * Column names match the clean Supabase schema documented in
+ * `src/clean_data.py`: `id, ecosystem, package_name, package_id, username,
+ * name, role, email`.
  */
+
+const MAINTAINER_COLUMNS = "id, package_id, username, name, role, email";
 
 export type CountByEcosystemArgs = { ecosystem: Ecosystem };
 
@@ -33,12 +36,36 @@ export type ListMaintainersForPackageArgs = {
 };
 
 /**
- * Phase 1 stub — backs A3 `GET /api/packages/:packageId/maintainers`. Should
- * dedupe by `username` within the package.
+ * Backs A3 `GET /api/packages/:packageId/maintainers`. Dedupes by
+ * `username` within the package (keeping the first row per username),
+ * since PostgREST does not expose `SELECT DISTINCT ON (...)`. Maintainer
+ * lists per package are small in practice, so we fetch the full set, dedupe
+ * in-memory, and then slice to the requested page. `total` is the deduped
+ * row count so pagination meta is consistent with the returned items.
  */
 export async function listMaintainersForPackage(
-  _client: SupabaseClient,
-  _args: ListMaintainersForPackageArgs,
+  client: SupabaseClient,
+  { packageId, ecosystem, limit, offset }: ListMaintainersForPackageArgs,
 ): Promise<{ items: Maintainer[]; total: number }> {
-  throw new Error("not implemented");
+  const { data, error } = await client
+    .from("maintainers")
+    .select(MAINTAINER_COLUMNS)
+    .eq("package_id", packageId)
+    .eq("ecosystem", ecosystem)
+    .order("username", { ascending: true });
+  if (error) {
+    throw new Error(`listMaintainersForPackage failed: ${error.message}`);
+  }
+
+  const rows = (data ?? []) as Maintainer[];
+  const seen = new Set<string>();
+  const deduped: Maintainer[] = [];
+  for (const row of rows) {
+    if (seen.has(row.username)) continue;
+    seen.add(row.username);
+    deduped.push(row);
+  }
+
+  const page = deduped.slice(offset, offset + limit);
+  return { items: page, total: deduped.length };
 }

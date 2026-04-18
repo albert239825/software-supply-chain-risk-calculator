@@ -31,3 +31,33 @@ Accept: application/json
 # curl: curl -sS "$BASE/api/packages/search?q=react&limit=10&ecosystem=npm" | jq .
 GET {{baseUrl}}/api/packages/search?q=react&limit=10&ecosystem=npm
 Accept: application/json
+
+### A2 — single package + latest-version enrichment
+# curl: curl -sS "$BASE/api/packages/0063402a-1335-5d56-b371-0ac3026e129d?ecosystem=npm" | jq .
+GET {{baseUrl}}/api/packages/0063402a-1335-5d56-b371-0ac3026e129d?ecosystem=npm
+Accept: application/json
+
+### R1 — versions of a package (Q1)
+# curl: curl -sS "$BASE/api/packages/0063402a-1335-5d56-b371-0ac3026e129d/versions?limit=50&offset=0&ecosystem=npm" | jq .
+GET {{baseUrl}}/api/packages/0063402a-1335-5d56-b371-0ac3026e129d/versions?limit=50&offset=0&ecosystem=npm
+Accept: application/json
+
+### A3 — maintainers of a package (deduped by username)
+# curl: curl -sS "$BASE/api/packages/0063402a-1335-5d56-b371-0ac3026e129d/maintainers?limit=100&offset=0&ecosystem=npm" | jq .
+GET {{baseUrl}}/api/packages/0063402a-1335-5d56-b371-0ac3026e129d/maintainers?limit=100&offset=0&ecosystem=npm
+Accept: application/json
+
+### A4 — direct dependencies of a package's latest version
+# curl: curl -sS "$BASE/api/packages/0063402a-1335-5d56-b371-0ac3026e129d/dependencies?depKind=all&limit=100&offset=0&ecosystem=npm" | jq .
+GET {{baseUrl}}/api/packages/0063402a-1335-5d56-b371-0ac3026e129d/dependencies?depKind=all&limit=100&offset=0&ecosystem=npm
+Accept: application/json
+
+### A5 — packages that directly depend on this package
+# curl: curl -sS "$BASE/api/packages/0063402a-1335-5d56-b371-0ac3026e129d/dependents?limit=100&offset=0&ecosystem=npm" | jq .
+GET {{baseUrl}}/api/packages/0063402a-1335-5d56-b371-0ac3026e129d/dependents?limit=100&offset=0&ecosystem=npm
+Accept: application/json
+
+### R9 — package versions with no source repository (Q9)
+# curl: curl -sS "$BASE/api/packages/no-repo?limit=100&offset=0&ecosystem=npm" | jq .
+GET {{baseUrl}}/api/packages/no-repo?limit=100&offset=0&ecosystem=npm
+Accept: application/json

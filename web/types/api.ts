@@ -20,6 +20,19 @@ export type Package = {
   latest_version: string;
 };
 
+/**
+ * A `Package` enriched with the latest-version metadata A2 surfaces on the
+ * Package Detail page. The `latest_*` fields come from the `versions` row
+ * whose `version` matches `package.latest_version`; all are nullable so the
+ * shape degrades gracefully when no such version exists.
+ */
+export type PackageWithLatest = Package & {
+  latest_released: ISODate | null;
+  latest_has_repository: boolean | null;
+  latest_github_owner: string | null;
+  latest_github_repo: string | null;
+};
+
 export type Version = {
   id: UUID;
   package_id: UUID;

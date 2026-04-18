@@ -391,6 +391,10 @@ Prefix/substring search by package name for the global search bar.
 ### A2. `GET /api/packages/:packageId`
 
 Single-package metadata used by the Package Detail and Risk Analysis pages.
+Returns the `Package` row plus latest-version enrichment fields drawn from
+the `versions` row whose `version` matches `package.latest_version`. Does
+NOT aggregate counts from A3/A4/A5 — callers that need those should hit
+the list endpoints directly.
 
 **Request**
 
@@ -399,7 +403,7 @@ Single-package metadata used by the Package Detail and Risk Analysis pages.
 | `packageId` | path | UUID | yes | |
 | `ecosystem` | query | `Ecosystem` | no | Defaults to `npm` |
 
-**Response 200**
+**Response 200** — shape: `PackageWithLatest` (`web/types/api.ts`).
 ```json
 {
   "id": "...",
@@ -408,11 +412,14 @@ Single-package metadata used by the Package Detail and Risk Analysis pages.
   "description": "Fast, unopinionated, minimalist web framework...",
   "latest_version": "4.18.2",
   "latest_released": "2025-01-14T09:23:11Z",
-  "has_repository": true,
-  "github_owner": "expressjs",
-  "github_repo": "express"
+  "latest_has_repository": true,
+  "latest_github_owner": "expressjs",
+  "latest_github_repo": "express"
 }
 ```
+When no matching row exists in `versions`, all four `latest_*` fields are
+returned as `null` (the `Package` row itself is still returned).
+
 **Other:** `404` if `packageId` unknown.
 
 ---
