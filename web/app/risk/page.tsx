@@ -54,17 +54,39 @@ export default function RiskAnalysisPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.map((row) => (
+                {/* Filter and sort data: valid risk_score first, then N/A at the bottom */}
+                {data.filter(
+                  (row) =>
+                    row.risk_score !== null &&
+                    row.risk_score !== undefined &&
+                    !isNaN(Number(row.risk_score))
+                ).sort((a, b) => Number(b.risk_score) - Number(a.risk_score)).map(
+                  (row) => (
+                    <tr key={row.package_name}>
+                      <td>{row.package_name}</td>
+                      <td>{row.maintainers}</td>
+                      <td>{row.dependencies}</td>
+                      <td>{row.last_release?.slice(0, 10)}</td>
+                      <td>
+                        {row.risk_score !== null && row.risk_score !== undefined && !isNaN(Number(row.risk_score))
+                          ? Number(row.risk_score).toFixed(2)
+                          : "N/A"}
+                      </td>
+                    </tr>
+                  )
+                )}
+                {data.filter(
+                  (row) =>
+                    row.risk_score === null ||
+                    row.risk_score === undefined ||
+                    isNaN(Number(row.risk_score))
+                ).map((row) => (
                   <tr key={row.package_name}>
                     <td>{row.package_name}</td>
                     <td>{row.maintainers}</td>
                     <td>{row.dependencies}</td>
                     <td>{row.last_release?.slice(0, 10)}</td>
-                    <td>
-                      {row.risk_score !== null && row.risk_score !== undefined && !isNaN(Number(row.risk_score))
-                        ? Number(row.risk_score).toFixed(2)
-                        : "N/A"}
-                    </td>
+                    <td>N/A</td>
                   </tr>
                 ))}
               </tbody>

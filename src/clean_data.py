@@ -143,7 +143,7 @@ def _merge_versions(group: list[dict[str, str]]) -> dict[str, str]:
 
     hr_raw = group[0].get("has_repository")
     if hr_raw is None or str(hr_raw).strip() == "":
-        has_repo = ""
+        has_repo = "false"
     else:
         s = str(hr_raw).strip().lower()
         if s in ("true", "1", "yes"):
@@ -151,7 +151,7 @@ def _merge_versions(group: list[dict[str, str]]) -> dict[str, str]:
         elif s in ("false", "0", "no"):
             has_repo = "false"
         else:
-            has_repo = str(hr_raw).strip()
+            has_repo = "false"
 
     return {
         "ecosystem": eco,
@@ -205,7 +205,7 @@ def clean_raw_run(
             row["version"] = _norm_version(row.get("version") or "")
             row["released"] = (row.get("released") or "").strip()
             if "has_repository" not in row:
-                row["has_repository"] = ""
+                row["has_repository"] = "false"
             row["github_owner"] = (row.get("github_owner") or "").strip()
             row["github_repo"] = (row.get("github_repo") or "").strip()
         for row in d_rows:
