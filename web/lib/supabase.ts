@@ -45,11 +45,21 @@ export function createSupabaseServerClient(): SupabaseClient {
 
 /**
  * Browser-safe Supabase client. Uses the anon key, which is safe to ship to
- * the client. Relies on `NEXT_PUBLIC_*` env vars so Next.js inlines them at
- * build time.
+ * the client.
+ *
+ * Must reference `process.env.NEXT_PUBLIC_*` via direct static property access
+ * (not through a helper) so Next.js inlines the values at build time. Dynamic
+ * lookups like `process.env[name]` are not replaced in the browser bundle and
+ * would always be `undefined`.
  */
 export function createSupabaseBrowserClient(): SupabaseClient {
-  const url = requireEnv("NEXT_PUBLIC_SUPABASE_URL");
-  const key = requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    throw new Error(
+      "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY. " +
+        "Set them in web/.env.local — see web/.env.example for the full list.",
+    );
+  }
   return createClient(url, key);
 }
