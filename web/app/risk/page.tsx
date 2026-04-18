@@ -54,7 +54,7 @@ export default function RiskAnalysisPage() {
                 </tr>
               </thead>
               <tbody>
-                {/* Filter and sort data: valid risk_score first, then N/A at the bottom */}
+                {/* Filter and sort data: valid risk_score first, i put N/A at the bottom but we can also remove*/}
                 {data.filter(
                   (row) =>
                     row.risk_score !== null &&

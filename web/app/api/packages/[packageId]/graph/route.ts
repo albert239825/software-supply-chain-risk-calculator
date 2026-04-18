@@ -1,4 +1,4 @@
-import pool from '../../../../../../lib/db';
+import pool from '../../../../../lib/db';
 import { NextRequest } from 'next/server';
 
 // GET /api/packages/:packageId/graph?maxDepth=4

@@ -10,18 +10,22 @@ const pages = [
   {
     name: "Home",
     blurb: "Top risky packages, ecosystem counts, and search.",
+    href: "/",
   },
   {
     name: "Graph Explorer",
     blurb: "Interactive dependency graph for any package.",
+    href: "/graph",
   },
   {
     name: "Risk Analysis",
     blurb: "Ranked composite risk plus per-signal breakdowns.",
+    href: "/risk",
   },
   {
     name: "Package Detail",
     blurb: "Versions, maintainers, and direct deps/dependents.",
+    href: "/packages",
   },
 ];
 
@@ -51,7 +55,7 @@ export default function Home() {
             {pages.map((page) => (
               <li key={page.name}>
                 <a
-                  href="#"
+                  href={page.href}
                   className="group flex flex-col gap-0.5 rounded-md border border-border p-3 transition-colors hover:bg-accent hover:text-accent-foreground"
                 >
                   <span className="font-medium">{page.name}</span>

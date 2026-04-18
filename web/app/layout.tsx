@@ -38,7 +38,7 @@ export default function RootLayout({
             <a href="/packages" className="font-medium hover:underline">Packages</a>
             <a href="/abandoned" className="font-medium hover:underline">Abandoned</a>
             <a href="/no-repo" className="font-medium hover:underline">No Repo</a>
-            {/* <a href="/graph" className="font-medium hover:underline">Graph Explorer</a> */}
+            <a href="/graph" className="font-medium hover:underline">Graph Explorer</a>
           </div>
         </nav>
         {children}
