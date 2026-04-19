@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
       ORDER BY max_dependency_depth, package_name;
     `, [n]);
     return new Response(JSON.stringify(result.rows), { status: 200 });
-  } catch (error: any) {
+  } catch (error) {
     return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500 });
   }
 }

@@ -2,12 +2,28 @@
 
 > Spec for the Next.js backend routes that power the Supply Chain Risk Scorer web app. Every non-auxiliary route is backed by one of the 10 M3 SQL queries (per CIS 5500 rubric). Auxiliary routes exist to support page composition and do not necessarily correspond to an M3 query.
 
+## v1 implementation status
+
+For M4/M5 the backend ships with a simplified shape compared to the original spec below:
+
+- **DB access:** direct Postgres via `pg.Pool` (not PostgREST). Set `SUPABASE_DB_URL` in `web/.env.local` to the Supabase Postgres **connection pooler** URL (Dashboard → Project Settings → Database → Connection string → Transaction mode).
+- **Response format:** **list endpoints return bare JSON arrays** (`[...]`), not `{ items, meta }`. The `{ error: "<msg>" }` error body and HTTP status codes still apply.
+- **Pagination / `?ecosystem=` filters:** deferred — not implemented in v1. Sorting / `LIMIT` is baked into each query.
+- **Skipped auxiliary routes:** A1 (`/api/packages/search`), A6 (`/api/packages/:id/risk`), A7 (`/api/stats/counts`), A8 (`/api/health`). A2-A5 are live.
+- **Extra route:** `/api/packages/all` (list every package × version by release date) is available to support the Packages page; not part of the rubric.
+- **Param name:** dynamic segment is `packageId` throughout (not `id`).
+- **R10 note:** `/api/risk/ranked` computes the composite in TypeScript via `web/lib/risk/score.ts` (`computeComposite`). SQL only materializes the raw per-package signals. This keeps the future A6 per-package breakdown in lockstep with the ranked list — do not re-inline weights in SQL.
+
+The rest of this document describes the original v1 design contract.
+
+---
+
 - **Base URL (dev):** `http://localhost:3000`
 - **Prefix:** `/api`
 - **Auth:** none in v1 (all endpoints public read-only)
 - **Response format:** JSON
-- **Pagination:** `?limit=&offset=` on list endpoints; list responses have the shape `{ items, meta: { total, limit, offset } }`
-- **Ecosystem filter:** every route accepts an optional `?ecosystem=` query param. Default is `npm`. Included for PyPI-readiness; PyPI is stretch (see PLAN §10).
+- **Pagination:** `?limit=&offset=` on list endpoints; list responses have the shape `{ items, meta: { total, limit, offset } }` *(design-time; see status note above — v1 ships bare arrays)*
+- **Ecosystem filter:** every route accepts an optional `?ecosystem=` query param. Default is `npm`. Included for PyPI-readiness; PyPI is stretch (see PLAN §10). *(design-time; not enforced in v1)*
 - **Package identifier:** the canonical package id is `packages.id` (UUIDv5 string), e.g. `0063402a-1335-5d56-b371-0ac3026e129d`. Routes that take `:packageId` expect this UUID. Name-based lookup goes through the search endpoint.
 - **Errors:** HTTP status codes only; body is `{ "error": "<message>" }`. No per-request error envelope on success responses.
 
@@ -66,33 +82,34 @@ type ListMeta = { total: number; limit: number; offset: number };
 
 ### Query-backed routes (one per M3 query — rubric requirement)
 
-| # | Route | Method | Backs query | Pages using it |
-|---|-------|--------|-------------|----------------|
-| R1 | `/api/packages/:packageId/versions` | GET | Q1 | Package Detail |
-| R2 | `/api/stats/top-fanout` | GET | Q2 | Home, Graph Explorer |
-| R3 | `/api/packages/:packageId/graph` | GET | Q3 | Graph Explorer |
-| R4 | `/api/risk/stale-low-maintainer` | GET | Q4 | Risk Analysis |
-| R5 | `/api/stats/most-dependents` | GET | Q5 | Home, Package Detail |
-| R6 | `/api/maintainers/top` | GET | Q6 | Package Detail |
-| R7 | `/api/risk/abandoned-popular` | GET | Q7 | Risk Analysis |
-| R8 | `/api/stats/depth-below` | GET | Q8 | Graph Explorer |
-| R9 | `/api/packages/no-repo` | GET | Q9 | Package Detail |
-| R10 | `/api/risk/ranked` | GET | Q10 | Home, Risk Analysis |
+| # | Route | Method | Backs query | v1 status | Pages using it |
+|---|-------|--------|-------------|-----------|----------------|
+| R1 | `/api/packages/:packageId/versions` | GET | Q1 | shipped | Package Detail |
+| R2 | `/api/stats/top-fanout` | GET | Q2 | shipped | Home, Graph Explorer |
+| R3 | `/api/packages/:packageId/graph` | GET | Q3 | shipped | Graph Explorer |
+| R4 | `/api/risk/stale-low-maintainer` | GET | Q4 | shipped | Risk Analysis |
+| R5 | `/api/stats/most-dependents` | GET | Q5 | shipped | Home, Package Detail |
+| R6 | `/api/maintainers/top` | GET | Q6 | shipped | Package Detail |
+| R7 | `/api/risk/abandoned-popular` | GET | Q7 | shipped | Risk Analysis |
+| R8 | `/api/stats/depth-below` | GET | Q8 | shipped | Graph Explorer |
+| R9 | `/api/packages/no-repo` | GET | Q9 | shipped | Package Detail |
+| R10 | `/api/risk/ranked` | GET | Q10 | shipped (TS-scored) | Home, Risk Analysis |
 
 ### Auxiliary routes (no dedicated M3 query)
 
-| # | Route | Method | Purpose |
-|---|-------|--------|---------|
-| A1 | `/api/packages/search` | GET | Search/autocomplete by name prefix |
-| A2 | `/api/packages/:packageId` | GET | Single-package metadata + latest version |
-| A3 | `/api/packages/:packageId/maintainers` | GET | Maintainers of a given package |
-| A4 | `/api/packages/:packageId/dependencies` | GET | Direct dependencies of latest version |
-| A5 | `/api/packages/:packageId/dependents` | GET | Packages that directly depend on this one |
-| A6 | `/api/packages/:packageId/risk` | GET | Composite risk + per-signal breakdown for one package |
-| A7 | `/api/stats/counts` | GET | Global counts (packages, versions, maintainers, edges) for Home header |
-| A8 | `/api/health` | GET | Liveness/readiness for the mentor check-in & CI |
+| # | Route | Method | v1 status | Purpose |
+|---|-------|--------|-----------|---------|
+| A1 | `/api/packages/search` | GET | **not in v1** | Search/autocomplete by name prefix |
+| A2 | `/api/packages/:packageId` | GET | shipped | Single-package metadata + latest version |
+| A3 | `/api/packages/:packageId/maintainers` | GET | shipped | Maintainers of a given package |
+| A4 | `/api/packages/:packageId/dependencies` | GET | shipped | Direct dependencies of latest version |
+| A5 | `/api/packages/:packageId/dependents` | GET | shipped | Packages that directly depend on this one |
+| A6 | `/api/packages/:packageId/risk` | GET | **not in v1** | Composite risk + per-signal breakdown for one package |
+| A7 | `/api/stats/counts` | GET | **not in v1** | Global counts (packages, versions, maintainers, edges) for Home header |
+| A8 | `/api/health` | GET | **not in v1** | Liveness/readiness for the mentor check-in & CI |
+| — | `/api/packages/all` | GET | shipped | Flat list of every package × version, newest first (Packages page) |
 
-Total: **10 query-backed + 8 auxiliary = 18 routes.**
+Total shipped in v1: **10 query-backed + 4 auxiliary + 1 extra = 15 routes.**
 
 ---
 

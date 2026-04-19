@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function PackageDetailPage() {
   const { packageId } = useParams<{ packageId: string }>();
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,9 +32,9 @@ export default function PackageDetailPage() {
         <CardContent>
           {loading && <div>Loading...</div>}
           {error && <div className="text-red-500">{error}</div>}
-          {!loading && !error && data && (
+          {!loading && !error && data ? (
             <pre className="whitespace-pre-wrap text-xs bg-muted p-2 rounded overflow-x-auto">{JSON.stringify(data, null, 2)}</pre>
-          )}
+          ) : null}
         </CardContent>
       </Card>
     </main>
