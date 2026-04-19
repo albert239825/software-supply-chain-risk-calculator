@@ -2,7 +2,7 @@ import pool from '../../../../lib/db';
 import { NextRequest } from 'next/server';
 
 // GET /api/maintainers/top
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     const result = await pool.query(`
       SELECT m.username, COUNT(DISTINCT m.package_id) AS num_packages
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
       LIMIT 10;
     `);
     return new Response(JSON.stringify(result.rows), { status: 200 });
-  } catch (error: any) {
+  } catch (error) {
     return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500 });
   }
 }

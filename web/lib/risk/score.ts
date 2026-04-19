@@ -1,11 +1,21 @@
-import type { RiskBreakdown } from "@/types/api";
-
 /**
  * Pure risk-scoring library for the composite signal formula in
- * `docs/PLAN.md` §7. This module intentionally has no Supabase import — it
- * is unit-testable and will be consumed by A6 (`/api/packages/:packageId/risk`)
- * and R10 (`/api/risk/ranked`) in Phase 1.
+ * `docs/PLAN.md` §7. This module has no DB import — it is unit-testable
+ * and is consumed by R10 (`/api/risk/ranked`) and A6
+ * (`/api/packages/:packageId/risk`, future).
  */
+
+export type RiskBreakdown = {
+  composite: number;
+  bucket: "low" | "medium" | "high";
+  signals: {
+    maintainer_count: { value: number; normalized: number; weight: number };
+    staleness_years: { value: number; normalized: number; weight: number };
+    fanout_direct: { value: number; normalized: number; weight: number };
+    fanin_dependents: { value: number; normalized: number; weight: number };
+    has_repository: { value: boolean; normalized: number; weight: number };
+  };
+};
 
 /**
  * Signal weights for the composite risk score.

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function GraphExplorer() {
   const [packageId, setPackageId] = useState("");
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<unknown>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,8 +16,8 @@ export default function GraphExplorer() {
       const res = await fetch(`/api/packages/${packageId}/graph`);
       if (!res.ok) throw new Error("Not found or error fetching graph");
       setData(await res.json());
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -41,7 +41,9 @@ export default function GraphExplorer() {
           </div>
           {loading && <div>Loading...</div>}
           {error && <div className="text-red-500">{error}</div>}
-          {data && <pre className="mt-4 whitespace-pre-wrap text-xs bg-muted p-2 rounded overflow-x-auto">{JSON.stringify(data, null, 2)}</pre>}
+          {data ? (
+            <pre className="mt-4 whitespace-pre-wrap text-xs bg-muted p-2 rounded overflow-x-auto">{JSON.stringify(data, null, 2)}</pre>
+          ) : null}
         </CardContent>
       </Card>
     </main>

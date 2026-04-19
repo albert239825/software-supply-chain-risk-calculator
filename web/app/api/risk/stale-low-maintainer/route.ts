@@ -2,7 +2,7 @@ import pool from '../../../../lib/db';
 import { NextRequest } from 'next/server';
 
 // GET /api/risk/stale-low-maintainer
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     const result = await pool.query(`
       SELECT p.name AS package_name, COUNT(m.id) AS maintainer_count, MAX(v.released) AS last_release
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
       ORDER BY last_release ASC;
     `);
     return new Response(JSON.stringify(result.rows), { status: 200 });
-  } catch (error: any) {
+  } catch (error) {
     return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500 });
   }
 }
