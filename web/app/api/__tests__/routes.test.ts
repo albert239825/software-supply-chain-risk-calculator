@@ -190,7 +190,11 @@ describe.skipIf(skip)('integration: /api/*', () => {
     expect(Array.isArray(await readJson(res))).toBe(true);
   });
 
-  it('R10 /api/risk/ranked → TS-scored rows with risk_score in [0,1] and valid bucket', async () => {
+  // R10 scans the full packages table + 3 correlated subqueries per row,
+  // so the route itself can take >20s against an unindexed Supabase. Bump
+  // the per-test timeout; the SQL will get a LIMIT / materialized-view
+  // optimization in a follow-up.
+  it('R10 /api/risk/ranked → TS-scored rows with risk_score in [0,1] and valid bucket', { timeout: 90_000 }, async () => {
     const res = await h.r10(req());
     expect(res.status).toBe(200);
     const body = (await readJson(res)) as Array<{
