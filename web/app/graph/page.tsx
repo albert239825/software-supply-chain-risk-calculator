@@ -1,28 +1,27 @@
-"use client";
+'use client';
 
 import {
   coerceDependencyEdgeRows,
-  dependencyRowsToForceGraph,
+  dependencyRowsToPackageForceGraph,
   type DependencyExplorerFgLink,
   type DependencyExplorerFgNode,
-  type DependencyGraphEdgeRow,
-} from "@/lib/graph/dependency-explorer-force-model";
-import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
+} from '@/lib/graph/dependency-explorer-force-model';
+import dynamic from 'next/dynamic';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 const DependencyExplorerGraph = dynamic(
   () =>
-    import("@/components/dependency-explorer-graph").then((m) => m.DependencyExplorerGraph),
+    import('@/components/dependency-explorer-graph').then((m) => m.DependencyExplorerGraph),
   {
     ssr: false,
     loading: () => (
@@ -32,6 +31,14 @@ const DependencyExplorerGraph = dynamic(
     ),
   },
 );
+
+type PackageSearchHit = {
+  package_id: string;
+  package_name: string;
+  ecosystem: string;
+  latest_version: string;
+  latest_version_id: string;
+};
 
 type GraphSeed = {
   package_id: string;
@@ -44,11 +51,17 @@ type GraphSeed = {
 
 type ExplorerLoad = {
   rootVersionId: string;
-  edges: DependencyGraphEdgeRow[];
+  rootPackageId: string | null;
+  edges: ReturnType<typeof coerceDependencyEdgeRows>;
 };
 
 export default function GraphExplorer() {
-  const [rootVersionId, setRootVersionId] = useState("");
+  const [nameQuery, setNameQuery] = useState('');
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState<PackageSearchHit[]>([]);
+  const [suggestBusy, setSuggestBusy] = useState(false);
+
+  const [manualVersionId, setManualVersionId] = useState('');
   const [explorer, setExplorer] = useState<ExplorerLoad | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,68 +75,111 @@ export default function GraphExplorer() {
       links: DependencyExplorerFgLink[];
     } = { nodes: [], links: [] };
     if (!explorer) return emptyGraph;
-    return dependencyRowsToForceGraph(explorer.edges, explorer.rootVersionId);
+
+    return dependencyRowsToPackageForceGraph(explorer.edges, explorer.rootPackageId);
   }, [explorer]);
 
-  const loadGraph = useCallback(async (versionId: string) => {
-    const trimmed = versionId.trim();
-    if (!trimmed) return;
+  const loadGraph = useCallback(
+    async (versionId: string, rootPackageHint: string | null) => {
+      const trimmed = versionId.trim();
+      if (!trimmed) return;
 
-    setRootVersionId(trimmed);
-    setLoading(true);
-    setError(null);
-    setExplorer(null);
-    try {
-      const res = await fetch(`/api/packages/${encodeURIComponent(trimmed)}/graph`);
-      const payload: unknown = await res.json();
+      setManualVersionId(trimmed);
+      setLoading(true);
+      setError(null);
+      setExplorer(null);
+      setSuggestionsOpen(false);
+      try {
+        const res = await fetch(
+          `/api/packages/${encodeURIComponent(trimmed)}/graph?maxOrder=2`,
+        );
 
-      if (
-        !res.ok ||
-        (payload !== null && typeof payload === "object" && "error" in payload)
-      ) {
-        const msg =
-          payload !== null && typeof payload === "object" && "error" in payload
-            ? String((payload as { error?: string }).error)
-            : "Not found or error fetching graph";
-        throw new Error(msg);
+        const payload: unknown = await res.json();
+
+        if (
+          !res.ok ||
+          (payload !== null && typeof payload === 'object' && 'error' in payload)
+        ) {
+          const msg =
+            payload !== null && typeof payload === 'object' && 'error' in payload
+              ? String((payload as { error?: string }).error)
+              : 'Not found or error fetching graph';
+
+          throw new Error(msg);
+        }
+
+        if (!Array.isArray(payload)) {
+          throw new Error('Graph API returned an unexpected response');
+        }
+
+        setExplorer({
+          rootVersionId: trimmed,
+          rootPackageId: rootPackageHint?.trim() ?? null,
+          edges: coerceDependencyEdgeRows(payload),
+        });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setLoading(false);
       }
+    },
+    [],
+  );
 
-      if (!Array.isArray(payload)) {
-        throw new Error("Graph API returned an unexpected response");
-      }
-
-      setExplorer({
-        rootVersionId: trimmed,
-        edges: coerceDependencyEdgeRows(payload),
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
+  /** Package name autocomplete */
+  useEffect(() => {
+    const q = nameQuery.trim();
+    if (q.length < 2) {
+      return undefined;
     }
-  }, []);
+
+    const ctrl = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        setSuggestBusy(true);
+        const res = await fetch(
+          `/api/graph/search?q=${encodeURIComponent(q)}`,
+          { signal: ctrl.signal },
+        );
+        const body: unknown = await res.json();
+        if (!res.ok || !Array.isArray(body)) {
+          setSuggestions([]);
+        } else {
+          setSuggestions(body as PackageSearchHit[]);
+        }
+      } catch {
+        setSuggestions([]);
+      } finally {
+        setSuggestBusy(false);
+      }
+    }, 260);
+
+    return () => {
+      ctrl.abort();
+      window.clearTimeout(timer);
+    };
+  }, [nameQuery]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/graph/seeds?limit=18");
+        const res = await fetch('/api/graph/seeds?limit=18');
         const payload: unknown = await res.json();
 
         if (
           !res.ok ||
-          (payload !== null &&
-            typeof payload === "object" &&
-            "error" in payload)
+          (payload !== null && typeof payload === 'object' && 'error' in payload)
         ) {
           const msg =
-            payload !== null && typeof payload === "object" && "error" in payload
+            payload !== null && typeof payload === 'object' && 'error' in payload
               ? String((payload as { error?: string }).error)
-              : "Could not load example roots";
+              : 'Could not load example roots';
+
           throw new Error(msg);
         }
 
-        if (!Array.isArray(payload)) throw new Error("Unexpected seeds response");
+        if (!Array.isArray(payload)) throw new Error('Unexpected seeds response');
 
         if (!cancelled) setSeeds(payload as GraphSeed[]);
       } catch (e) {
@@ -138,7 +194,7 @@ export default function GraphExplorer() {
     };
   }, []);
 
-  const edgeSummary = explorer ? `${explorer.edges.length} edge rows` : "";
+  const edgeSummary = explorer ? `${explorer.edges.length} edge rows (hops ≤ 2)` : '';
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-6 py-16">
@@ -146,34 +202,116 @@ export default function GraphExplorer() {
         <CardHeader>
           <CardTitle>Graph Explorer</CardTitle>
           <CardDescription>
-            Walk outbound dependencies starting from one version row. Paste the{" "}
-            <span className="font-medium text-foreground">
-              root version UUID
-            </span>{" "}
-            (
+            Search by package name, or paste a{' '}
             <code className="rounded bg-muted px-1 py-0.5 text-xs">
               versions.id
-            </code>
-            ). The graph packs point from a version toward each dependency
-            package; arrows aggregate multiple requirement lines when needed.
+            </code>{' '}
+            for advanced mode. Edges shown are&nbsp;
+            <span className="font-medium text-foreground">
+              direct (1<sup>st</sup>‑order)
+            </span>{' '}
+            and&nbsp;
+            <span className="font-medium text-foreground">
+              one step beyond (2<sup>nd</sup>‑order)
+            </span>
+            {' — '}
+            one node per canonical package so the diagram stays readable.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex flex-wrap gap-2">
-            <Input
-              value={rootVersionId}
-              onChange={(e) => setRootVersionId(e.target.value)}
-              placeholder="Root version UUID (versions.id)"
-              className="min-w-[200px] flex-1 font-mono text-sm"
-            />
-            <Button
-              type="button"
-              onClick={() => void loadGraph(rootVersionId)}
-              disabled={loading || !rootVersionId.trim()}
-            >
-              Explore
-            </Button>
+          <div className="relative space-y-2">
+            <label className="text-muted-foreground text-xs leading-none font-medium tracking-wide uppercase">
+              Find package
+            </label>
+
+            <div className="relative">
+              <Input
+                role="combobox"
+                aria-expanded={suggestionsOpen}
+                aria-autocomplete="list"
+                value={nameQuery}
+                onChange={(e) => {
+                  const v = e.target.value;
+
+                  setNameQuery(v);
+
+                  if (v.trim().length < 2) {
+                    setSuggestions([]);
+                    setSuggestBusy(false);
+                  }
+                  setSuggestionsOpen(true);
+                }}
+                onFocus={() => {
+                  if (nameQuery.trim().length >= 2) setSuggestionsOpen(true);
+                }}
+
+                onBlur={() => window.setTimeout(() => setSuggestionsOpen(false), 120)}
+                placeholder="Type a package name (e.g. express, boto3)"
+                autoComplete="off"
+                spellCheck={false}
+              />
+
+              {suggestionsOpen && nameQuery.trim().length >= 2 && (
+                <ul className="absolute z-40 mt-1 max-h-64 w-full overflow-auto rounded-lg border bg-popover p-1 shadow-md">
+                  {suggestBusy ? (
+                    <li className="text-muted-foreground px-3 py-2 text-sm">Searching…</li>
+                  ) : suggestions.length === 0 ? (
+                    <li className="text-muted-foreground px-3 py-2 text-sm">No matches</li>
+                  ) : (
+                    suggestions.map((hit) => (
+                      <li key={`${hit.ecosystem}-${hit.package_id}`}>
+                        <button
+                          type="button"
+                          className="flex w-full flex-col rounded-md px-3 py-2 text-left hover:bg-accent"
+                          onMouseDown={(e) => e.preventDefault()}
+                          disabled={loading}
+                          onClick={() => {
+                            setNameQuery(
+                              `${hit.ecosystem}:${hit.package_name} @${hit.latest_version}`,
+                            );
+                            void loadGraph(hit.latest_version_id, hit.package_id);
+                          }}
+                        >
+                          <span className="font-medium">
+                            <span className="text-muted-foreground">{hit.ecosystem}</span>{' '}
+                            {hit.package_name}{' '}
+                            <span className="font-normal text-muted-foreground">
+                              @{hit.latest_version}
+                            </span>
+                          </span>
+
+                          <span className="mt-1 font-mono text-[10px] text-muted-foreground break-all opacity-75">
+                            {hit.package_id}
+                          </span>
+                        </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              )}
+            </div>
           </div>
+
+          <details className="rounded-lg border px-3 py-2">
+            <summary className="cursor-pointer text-sm hover:underline">
+              Advanced: explore by root version UUID
+            </summary>
+            <div className="mt-3 mb-2 flex flex-wrap gap-2">
+              <Input
+                value={manualVersionId}
+                onChange={(e) => setManualVersionId(e.target.value)}
+                placeholder="Root version UUID (versions.id)"
+                className="min-w-[200px] flex-1 font-mono text-sm"
+              />
+              <Button
+                type="button"
+                onClick={() => void loadGraph(manualVersionId, null)}
+                disabled={loading || !manualVersionId.trim()}
+              >
+                Explore
+              </Button>
+            </div>
+          </details>
 
           {loading && (
             <div className="text-muted-foreground text-sm">Loading…</div>
@@ -184,8 +322,9 @@ export default function GraphExplorer() {
             <>
               <div className="text-muted-foreground text-xs">
                 {edgeSummary}
+
                 {explorer.edges.length > 0
-                  ? ` · ${graphModel.nodes.length} nodes · ${graphModel.links.length} unique links`
+                  ? ` · ${graphModel.nodes.length} packages · ${graphModel.links.length} links`
                   : null}
               </div>
 
@@ -208,8 +347,7 @@ export default function GraphExplorer() {
         <CardHeader>
           <CardTitle className="text-base">Quick picks</CardTitle>
           <CardDescription>
-            High fan-out roots (many direct dependencies). Each row lists the
-            canonical package ID and the version ID the graph API expects.
+            High fan-out roots (many direct dependencies). Opens the same 2‑hop explorer.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -228,32 +366,34 @@ export default function GraphExplorer() {
                 <button
                   type="button"
                   disabled={loading}
-                  onClick={() => void loadGraph(s.version_id)}
+                  onClick={() => {
+                    setNameQuery(`${s.ecosystem}:${s.package_name}@${s.version}`);
+                    void loadGraph(s.version_id, s.package_id);
+                  }}
                   className={cn(
-                    "w-full rounded-lg border bg-card px-3 py-2.5 text-left text-sm shadow-sm transition-colors",
-                    "hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    loading && "pointer-events-none opacity-60",
+                    'w-full rounded-lg border bg-card px-3 py-2.5 text-left text-sm shadow-sm transition-colors',
+                    'hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    loading && 'pointer-events-none opacity-60',
                   )}
                 >
                   <div className="font-medium">
                     <span className="text-muted-foreground">{s.ecosystem}</span>
-                    {" · "}
+                    {' · '}
                     {s.package_name}
-                    <span className="text-muted-foreground">
-                      {" "}
-                      @{s.version}
-                    </span>
+
+                    <span className="text-muted-foreground"> @{s.version}</span>
+
                     <span className="float-right font-normal text-muted-foreground text-xs tabular-nums">
                       {s.dependency_count} deps
                     </span>
                   </div>
                   <div className="mt-1 space-y-0.5 break-all font-mono text-[11px] text-muted-foreground leading-snug">
                     <div>
-                      package_id{" "}
+                      package_id{' '}
                       <span className="text-foreground/80">{s.package_id}</span>
                     </div>
                     <div>
-                      root{" "}
+                      root{' '}
                       <span className="text-foreground/80">{s.version_id}</span>
                     </div>
                   </div>

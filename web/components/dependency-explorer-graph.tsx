@@ -118,22 +118,20 @@ export function DependencyExplorerGraph({
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground text-xs">
         <span>
-          <span className="inline-block size-2 rounded-full bg-blue-600 align-middle" /> Root version
+          <span className="inline-block size-2 rounded-full bg-blue-600 align-middle" /> Root
         </span>
         <span>
-          <span className="inline-block size-2 rounded-full bg-violet-600 align-middle" /> Traversed version
+          <span className="inline-block size-2 rounded-full bg-violet-600 align-middle" /> 1<sup>st</sup>-order deps
         </span>
         <span>
-          <span className="inline-block size-2 rounded-full bg-slate-500 align-middle" /> Package
+          <span className="inline-block size-2 rounded-full bg-slate-500 align-middle" /> 2<sup>nd</sup>-order deps
         </span>
         <span className="ml-auto shrink-0">Drag background to pan · scroll to zoom · hover edges for specs</span>
       </div>
 
       {focus && (
         <div className="rounded-lg border bg-muted/30 p-3 text-sm">
-          <div className="font-medium">
-            {focus.kind === 'version' ? 'Version' : 'Package'}
-          </div>
+          <div className="font-medium">{focus.isRoot ? 'Root package' : `Tier ${focus.tier} package`}</div>
           <div className="mt-1 break-all text-muted-foreground">{focus.name}</div>
           <div className="mt-1 break-all text-muted-foreground text-xs">{focus.subtitle}</div>
           <div className="mt-2 font-mono text-muted-foreground text-xs break-all">{focus.uuid}</div>

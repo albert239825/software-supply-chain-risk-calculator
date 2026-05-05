@@ -1,13 +1,23 @@
 import pool from '../../../../../lib/db';
 import { NextRequest } from 'next/server';
 
-// GET /api/packages/:packageId/graph?maxDepth=4
+// GET /api/packages/:packageId/graph?maxDepth=4&maxOrder=2
+// :packageId is the root **versions.id**. maxOrder caps outbound hop depth shown (1=direct deps only).
 export async function GET(req: NextRequest, context: { params: Promise<{ packageId: string }> }) {
   const { packageId } = await context.params;
   const { searchParams } = new URL(req.url);
-  const maxDepth = parseInt(searchParams.get('maxDepth') || '4', 10);
+
+  let maxDepth = parseInt(searchParams.get('maxDepth') || '4', 10);
+  if (!Number.isFinite(maxDepth)) maxDepth = 4;
+  maxDepth = Math.min(Math.max(maxDepth, 1), 32);
+
+  let maxOrder = parseInt(searchParams.get('maxOrder') || '2', 10);
+  if (!Number.isFinite(maxOrder)) maxOrder = 2;
+  maxOrder = Math.min(Math.max(maxOrder, 1), 4);
+
   try {
-    const result = await pool.query(`
+    const result = await pool.query(
+      `
       WITH RECURSIVE bfs AS (
          SELECT 0 AS depth, ARRAY[$1::text] AS frontier, ARRAY[$1::text] AS seen
          UNION ALL
@@ -21,21 +31,46 @@ export async function GET(req: NextRequest, context: { params: Promise<{ package
            JOIN versions v_next ON v_next.package_id::text = p.id::text AND v_next.version = p.latest_version
            WHERE NOT (v_next.id::text = ANY(b.seen))
          ) AS nxt ON cardinality(nxt.next_frontier) > 0
-         WHERE b.depth < $2
+         WHERE b.depth < $2::int
       ),
       dep_tree AS (
-         SELECT d.from_version_id, d.to_package_id, d.from_package, d.from_version, d.to_package, d.version_spec, d.dep_kind, b.depth + 1 AS depth
-         FROM bfs b
-         JOIN LATERAL unnest(b.frontier) AS cur(from_version_id) ON TRUE
-         JOIN dependencies d ON d.from_version_id::text = cur.from_version_id
+        SELECT
+          pkg_from.id::text          AS from_package_id,
+          d.from_version_id,
+          pkg_to.id::text            AS to_package_id,
+          pkg_from.name              AS from_package,
+          d.from_version             AS from_version,
+          pkg_to.name                AS to_package,
+          d.version_spec,
+          d.dep_kind,
+          b.depth + 1               AS depth
+        FROM bfs b
+        JOIN LATERAL unnest(b.frontier) AS cur(from_version_id) ON TRUE
+        JOIN dependencies d ON d.from_version_id::text = cur.from_version_id
+        JOIN versions vf ON vf.id::text = d.from_version_id::text
+        JOIN packages pkg_from ON pkg_from.id = vf.package_id
+        JOIN packages pkg_to ON pkg_to.id::text = d.to_package_id::text
       ),
       graph AS (
-         SELECT DISTINCT ON (to_package_id, dep_kind) from_version_id, to_package_id, from_package, from_version, to_package, version_spec, dep_kind, depth
+         SELECT DISTINCT ON (from_package_id, to_package_id, dep_kind)
+            from_package_id,
+            from_version_id,
+            to_package_id,
+            from_package,
+            from_version,
+            to_package,
+            version_spec,
+            dep_kind,
+            depth
          FROM dep_tree
-         ORDER BY to_package_id, dep_kind, depth
+         ORDER BY from_package_id, to_package_id, dep_kind, depth ASC
       )
-      SELECT * FROM graph;
-    `, [packageId, maxDepth]);
+      SELECT *
+      FROM graph
+      WHERE depth <= $3::int;
+    `,
+      [packageId, maxDepth, maxOrder],
+    );
     return new Response(JSON.stringify(result.rows), { status: 200 });
   } catch (error) {
     return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500 });
