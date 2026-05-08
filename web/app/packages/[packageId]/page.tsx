@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageSpinner } from "@/components/ui/spinner";
 
 export default function PackageDetailPage() {
   const { packageId } = useParams<{ packageId: string }>();
@@ -30,7 +31,7 @@ export default function PackageDetailPage() {
           <CardTitle>Package Detail</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading && <div>Loading...</div>}
+          {loading && <PageSpinner label="Loading package versions…" />}
           {error && <div className="text-red-500">{error}</div>}
           {!loading && !error && data ? (
             <pre className="whitespace-pre-wrap text-xs bg-muted p-2 rounded overflow-x-auto">{JSON.stringify(data, null, 2)}</pre>

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageSpinner } from "@/components/ui/spinner";
 
 interface AbandonedRow {
   package_name: string;
@@ -33,7 +34,7 @@ export default function AbandonedPage() {
           <CardTitle>Abandoned but Popular Packages</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading && <div>Loading...</div>}
+          {loading && <PageSpinner label="Loading abandoned packages…" />}
           {error && <div className="text-red-500">{error}</div>}
           {!loading && !error && (
             <table className="w-full text-left border-collapse">

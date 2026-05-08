@@ -190,26 +190,36 @@ describe.skipIf(skip)('integration: /api/*', () => {
     expect(Array.isArray(await readJson(res))).toBe(true);
   });
 
-  // R10 scans the full packages table + 3 correlated subqueries per row,
-  // so the route itself can take >20s against an unindexed Supabase. Bump
-  // the per-test timeout; the SQL will get a LIMIT / materialized-view
-  // optimization in a follow-up.
-  it('R10 /api/risk/ranked → TS-scored rows with risk_score in [0,1] and valid bucket', { timeout: 90_000 }, async () => {
+  it('R10 /api/risk/ranked → paginated TS-scored rows', { timeout: 90_000 }, async () => {
     const res = await h.r10(req());
     expect(res.status).toBe(200);
-    const body = (await readJson(res)) as Array<{
-      package_id: string;
-      package_name: string;
-      risk_score: number;
-      bucket: string;
-    }>;
-    expect(Array.isArray(body)).toBe(true);
-    expect(body.length).toBeGreaterThan(0);
-    // Sorted desc.
-    for (let i = 1; i < body.length; i++) {
-      expect(body[i - 1].risk_score).toBeGreaterThanOrEqual(body[i].risk_score);
+
+    const body = (await readJson(res)) as {
+      items: Array<{
+        package_id: string;
+        package_name: string;
+        risk_score: number;
+        bucket: string;
+      }>;
+      total: number;
+      limit: number;
+      offset: number;
+      hasMore: boolean;
+    };
+
+    expect(Array.isArray(body.items)).toBe(true);
+    expect(body.items.length).toBeGreaterThan(0);
+    expect(typeof body.total).toBe('number');
+    expect(body.total).toBeGreaterThanOrEqual(body.items.length);
+    expect(body.offset).toBe(0);
+
+    for (let i = 1; i < body.items.length; i++) {
+      expect(body.items[i - 1].risk_score).toBeGreaterThanOrEqual(
+        body.items[i].risk_score,
+      );
     }
-    for (const row of body) {
+
+    for (const row of body.items) {
       expect(row.risk_score).toBeGreaterThanOrEqual(0);
       expect(row.risk_score).toBeLessThanOrEqual(1);
       expect(['low', 'medium', 'high']).toContain(row.bucket);

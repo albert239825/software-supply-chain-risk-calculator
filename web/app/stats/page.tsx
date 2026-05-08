@@ -1,6 +1,14 @@
 "use client";
+
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { PageSpinner } from "@/components/ui/spinner";
 
 interface FanoutRow {
   package_name: string;
@@ -35,61 +43,70 @@ export default function StatsPage() {
   }, []);
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <Card>
-        <CardHeader>
-          <CardTitle>Top Packages by Dependency Count</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading && <div>Loading...</div>}
-          {error && <div className="text-red-500">{error}</div>}
-          {!loading && !error && (
-            <table className="w-full text-left border-collapse mb-8">
-              <thead>
-                <tr>
-                  <th>Package</th>
-                  <th>Num Dependencies</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fanout.map((row) => (
-                  <tr key={row.package_name}>
-                    <td>{row.package_name}</td>
-                    <td>{row.num_dependencies}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+    <main className="mx-auto max-w-3xl space-y-8 px-6 py-16">
+      {loading ? (
+        <Card>
+          <CardContent>
+            <PageSpinner label="Loading statistics…" />
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {error ? (
+            <div className="text-destructive text-sm">{error}</div>
+          ) : (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Top Packages by Dependency Count</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <table className="mb-8 w-full border-collapse text-left">
+                    <thead>
+                      <tr>
+                        <th>Package</th>
+                        <th>Num Dependencies</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {fanout.map((row) => (
+                        <tr key={row.package_name}>
+                          <td>{row.package_name}</td>
+                          <td>{row.num_dependencies}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Most Depended-on Packages</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <table className="w-full border-collapse text-left">
+                    <thead>
+                      <tr>
+                        <th>Package</th>
+                        <th>Dependents</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dependents.map((row) => (
+                        <tr key={row.package_name}>
+                          <td>{row.package_name}</td>
+                          <td>{row.dependents}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </CardContent>
+              </Card>
+            </>
           )}
-        </CardContent>
-      </Card>
-      <Card className="mt-8">
-        <CardHeader>
-          <CardTitle>Most Depended-on Packages</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading && <div>Loading...</div>}
-          {error && <div className="text-red-500">{error}</div>}
-          {!loading && !error && (
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr>
-                  <th>Package</th>
-                  <th>Dependents</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dependents.map((row) => (
-                  <tr key={row.package_name}>
-                    <td>{row.package_name}</td>
-                    <td>{row.dependents}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </CardContent>
-      </Card>
+        </>
+      )}
     </main>
   );
 }

@@ -17,6 +17,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { PageSpinner, Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 
 const DependencyExplorerGraph = dynamic(
@@ -25,8 +26,8 @@ const DependencyExplorerGraph = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-[min(62vh,640px)] min-h-[340px] w-full animate-pulse items-center justify-center rounded-lg border bg-muted/30 text-muted-foreground text-sm">
-        Loading visualization…
+      <div className="flex h-[min(62vh,640px)] min-h-[340px] w-full items-center justify-center rounded-lg border bg-muted/30">
+        <PageSpinner className="min-h-0 py-4" label="Loading visualization…" />
       </div>
     ),
   },
@@ -198,7 +199,7 @@ export default function GraphExplorer() {
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-6 py-16">
-      <Card>
+      <Card className="relative z-10 overflow-visible">
         <CardHeader>
           <CardTitle>Graph Explorer</CardTitle>
           <CardDescription>
@@ -218,8 +219,8 @@ export default function GraphExplorer() {
             one node per canonical package so the diagram stays readable.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="relative space-y-2">
+        <CardContent className="space-y-6 overflow-visible">
+          <div className="relative z-20 space-y-2">
             <label className="text-muted-foreground text-xs leading-none font-medium tracking-wide uppercase">
               Find package
             </label>
@@ -252,9 +253,15 @@ export default function GraphExplorer() {
               />
 
               {suggestionsOpen && nameQuery.trim().length >= 2 && (
-                <ul className="absolute z-40 mt-1 max-h-64 w-full overflow-auto rounded-lg border bg-popover p-1 shadow-md">
+                <ul
+                  role="listbox"
+                  className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-lg border bg-popover p-1 shadow-lg"
+                >
                   {suggestBusy ? (
-                    <li className="text-muted-foreground px-3 py-2 text-sm">Searching…</li>
+                    <li className="text-muted-foreground flex items-center gap-2 px-3 py-2 text-sm">
+                      <Spinner size="sm" className="text-primary" />
+                      Searching…
+                    </li>
                   ) : suggestions.length === 0 ? (
                     <li className="text-muted-foreground px-3 py-2 text-sm">No matches</li>
                   ) : (
@@ -308,13 +315,20 @@ export default function GraphExplorer() {
                 onClick={() => void loadGraph(manualVersionId, null)}
                 disabled={loading || !manualVersionId.trim()}
               >
-                Explore
+                {loading ? (
+                  <span className="inline-flex items-center justify-center gap-2">
+                    <Spinner size="sm" className="text-primary" />
+                    Explore
+                  </span>
+                ) : (
+                  'Explore'
+                )}
               </Button>
             </div>
           </details>
 
           {loading && (
-            <div className="text-muted-foreground text-sm">Loading…</div>
+            <PageSpinner className="min-h-[7rem]" label="Loading graph…" />
           )}
           {error && <div className="text-destructive text-sm">{error}</div>}
 
@@ -343,7 +357,7 @@ export default function GraphExplorer() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="relative z-0">
         <CardHeader>
           <CardTitle className="text-base">Quick picks</CardTitle>
           <CardDescription>
@@ -352,7 +366,10 @@ export default function GraphExplorer() {
         </CardHeader>
         <CardContent className="space-y-3">
           {!seedsDone && (
-            <p className="text-muted-foreground text-sm">Loading examples…</p>
+            <div className="text-muted-foreground flex items-center gap-2 py-4 text-sm">
+              <Spinner size="sm" className="text-primary" />
+              Loading examples…
+            </div>
           )}
           {seedsDone && seedsError && (
             <p className="text-destructive text-sm">{seedsError}</p>

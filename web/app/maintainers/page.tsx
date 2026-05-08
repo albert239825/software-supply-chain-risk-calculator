@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageSpinner } from "@/components/ui/spinner";
 
 interface MaintainerRow {
   username: string;
@@ -32,7 +33,7 @@ export default function MaintainersPage() {
           <CardTitle>Top Maintainers</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading && <div>Loading...</div>}
+          {loading && <PageSpinner label="Loading maintainers…" />}
           {error && <div className="text-red-500">{error}</div>}
           {!loading && !error && (
             <table className="w-full text-left border-collapse">
