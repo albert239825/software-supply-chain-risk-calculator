@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bell, Mail, Plus, Search, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,30 @@ type TrackedRow = {
   ecosystem: string;
   description: string | null;
   latest_version: string;
+  latest_version_id: string | null;
+};
+
+type GitHubRepo = {
+  id: number;
+  name: string;
+  fullName: string;
+  private: boolean;
+  defaultBranch: string;
+  htmlUrl: string;
+  updatedAt: string;
+};
+
+type GitHubImportResult = {
+  repo: string;
+  total: number;
+  matched: Array<{
+    package_id: string;
+    package_name: string;
+    ecosystem: string;
+    latest_version: string;
+    latest_version_id: string | null;
+  }>;
+  unmatched: string[];
 };
 
 export default function TrackPage() {
@@ -42,6 +67,11 @@ export default function TrackPage() {
   const [results, setResults] = useState<SearchRow[]>([]);
   const [searching, setSearching] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [repos, setRepos] = useState<GitHubRepo[]>([]);
+  const [selectedRepo, setSelectedRepo] = useState("");
+  const [reposLoading, setReposLoading] = useState(false);
+  const [importingRepo, setImportingRepo] = useState(false);
+  const [importResult, setImportResult] = useState<GitHubImportResult | null>(null);
 
   const trackedIds = useMemo(
     () => new Set(tracked.map((row) => row.package_id)),
@@ -151,6 +181,46 @@ export default function TrackPage() {
     setTracked((rows) => rows.filter((row) => row.package_id !== packageId));
   }
 
+  async function loadRepos() {
+    setReposLoading(true);
+    setMessage(null);
+    const res = await fetch("/api/github/repos");
+    const body = await res.json();
+    if (!res.ok) {
+      setMessage(body.error || "Could not load GitHub repositories");
+      setReposLoading(false);
+      return;
+    }
+
+    setRepos(body);
+    setSelectedRepo(body[0]?.fullName ?? "");
+    setReposLoading(false);
+  }
+
+  async function importRepoDependencies() {
+    if (!selectedRepo) {
+      return;
+    }
+
+    setImportingRepo(true);
+    setMessage(null);
+    const res = await fetch("/api/github/repos/import", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ fullName: selectedRepo }),
+    });
+    const body = await res.json();
+    if (!res.ok) {
+      setMessage(body.error || "Could not import GitHub dependencies");
+      setImportingRepo(false);
+      return;
+    }
+
+    setImportResult(body);
+    await refreshTracked();
+    setImportingRepo(false);
+  }
+
   if (authLoading) {
     return (
       <main className="mx-auto max-w-3xl px-6 py-20">
@@ -237,6 +307,65 @@ export default function TrackPage() {
 
       <Card className="border-border bg-card shadow-sm">
         <CardHeader>
+          <CardTitle>Import from GitHub</CardTitle>
+          <CardDescription>
+            Load a repository package.json and track dependencies that exist in this app.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <div className="flex flex-col gap-3 md:flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={loadRepos}
+              disabled={reposLoading}
+            >
+              {reposLoading ? "Loading repos..." : "Load GitHub repos"}
+            </Button>
+            <select
+              value={selectedRepo}
+              onChange={(event) => setSelectedRepo(event.target.value)}
+              className="h-9 min-w-0 flex-1 rounded-lg border border-input bg-background px-3 text-sm"
+              disabled={repos.length === 0}
+            >
+              {repos.length === 0 ? (
+                <option value="">No repositories loaded</option>
+              ) : (
+                repos.map((repo) => (
+                  <option key={repo.id} value={repo.fullName}>
+                    {repo.fullName}
+                    {repo.private ? " (private)" : ""}
+                  </option>
+                ))
+              )}
+            </select>
+            <Button
+              type="button"
+              onClick={importRepoDependencies}
+              disabled={!selectedRepo || importingRepo}
+            >
+              {importingRepo ? "Importing..." : "Import dependencies"}
+            </Button>
+          </div>
+
+          {importResult && (
+            <div className="rounded-md border border-border bg-muted/40 p-4 text-sm">
+              <p className="font-medium">
+                Imported {importResult.matched.length} of {importResult.total} dependencies from{" "}
+                {importResult.repo}.
+              </p>
+              {importResult.unmatched.length > 0 && (
+                <p className="mt-1 text-muted-foreground">
+                  {importResult.unmatched.length} dependencies were not in the local package database.
+                </p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-border bg-card shadow-sm">
+        <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Search className="size-5 text-primary" />
             Add a dependency
@@ -312,6 +441,14 @@ export default function TrackPage() {
                     <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
                       {row.description}
                     </p>
+                  )}
+                  {row.latest_version_id && (
+                    <Link
+                      href={`/graph?versionId=${encodeURIComponent(row.latest_version_id)}&packageId=${encodeURIComponent(row.package_id)}`}
+                      className="mt-2 inline-block text-sm font-semibold text-primary hover:underline"
+                    >
+                      Open graph
+                    </Link>
                   )}
                 </div>
                 <Button

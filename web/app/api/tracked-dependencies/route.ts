@@ -34,7 +34,14 @@ export async function GET(req: NextRequest) {
         p.name AS package_name,
         p.ecosystem,
         p.description,
-        p.latest_version
+        p.latest_version,
+        (
+          SELECT v.id
+          FROM versions v
+          WHERE v.package_id = p.id
+            AND v.version = p.latest_version
+          LIMIT 1
+        ) AS latest_version_id
       FROM user_tracked_dependencies utd
       JOIN packages p ON p.id = utd.package_id
       WHERE utd.user_id = $1

@@ -127,6 +127,22 @@ export default function GraphExplorer() {
     [],
   );
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const versionId = params.get('versionId');
+    const packageId = params.get('packageId');
+
+    if (versionId) {
+      const timeout = window.setTimeout(() => {
+        void loadGraph(versionId, packageId);
+      }, 0);
+
+      return () => window.clearTimeout(timeout);
+    }
+
+    return undefined;
+  }, [loadGraph]);
+
   /** Package name autocomplete */
   useEffect(() => {
     const q = nameQuery.trim();

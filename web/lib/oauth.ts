@@ -21,6 +21,7 @@ type GoogleUserInfo = {
 
 type GitHubTokenResponse = {
   access_token?: string;
+  scope?: string;
   error?: string;
   error_description?: string;
 };
@@ -67,7 +68,7 @@ export function buildOAuthUrl(
   const url = new URL('https://github.com/login/oauth/authorize');
   url.searchParams.set('client_id', mustEnv('GITHUB_CLIENT_ID'));
   url.searchParams.set('redirect_uri', getCallbackUrl(req, provider));
-  url.searchParams.set('scope', 'read:user user:email');
+  url.searchParams.set('scope', 'repo read:user user:email');
   url.searchParams.set('state', state);
   return url.toString();
 }
@@ -177,6 +178,8 @@ async function exchangeGitHubCode(
     displayName: profile.name ?? profile.login,
     avatarUrl: profile.avatar_url,
     profileUrl: profile.html_url,
+    accessToken: token.access_token,
+    scopes: token.scope ?? null,
   };
 }
 

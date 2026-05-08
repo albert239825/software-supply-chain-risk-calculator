@@ -20,6 +20,8 @@ export type OAuthProfile = {
   displayName: string | null;
   avatarUrl: string | null;
   profileUrl: string | null;
+  accessToken?: string | null;
+  scopes?: string | null;
 };
 
 const SESSION_DAYS = 30;
@@ -136,12 +138,16 @@ export async function createOrUpdateUserFromOAuth(
       provider,
       provider_user_id,
       provider_email,
+      provider_access_token,
+      provider_scopes,
       profile_url
     )
-    VALUES ($1, $2, $3, $4, $5)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
     ON CONFLICT (provider, provider_user_id)
     DO UPDATE SET
       provider_email = EXCLUDED.provider_email,
+      provider_access_token = COALESCE(EXCLUDED.provider_access_token, user_auth_identities.provider_access_token),
+      provider_scopes = COALESCE(EXCLUDED.provider_scopes, user_auth_identities.provider_scopes),
       profile_url = EXCLUDED.profile_url,
       updated_at = now();
     `,
@@ -150,6 +156,8 @@ export async function createOrUpdateUserFromOAuth(
       profile.provider,
       profile.providerUserId,
       profile.email,
+      profile.accessToken ?? null,
+      profile.scopes ?? null,
       profile.profileUrl,
     ],
   );

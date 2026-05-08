@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS user_auth_identities (
   provider text NOT NULL CHECK (provider IN ('google', 'github')),
   provider_user_id text NOT NULL,
   provider_email text,
+  provider_access_token text,
+  provider_scopes text,
   profile_url text,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
@@ -38,12 +40,18 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 CREATE TABLE IF NOT EXISTS user_tracked_dependencies (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  package_id uuid NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
+  package_id text NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
   note text,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (user_id, package_id)
 );
+
+ALTER TABLE user_auth_identities
+  ADD COLUMN IF NOT EXISTS provider_access_token text;
+
+ALTER TABLE user_auth_identities
+  ADD COLUMN IF NOT EXISTS provider_scopes text;
 
 CREATE INDEX IF NOT EXISTS idx_user_sessions_user_expires
   ON user_sessions(user_id, expires_at DESC);
