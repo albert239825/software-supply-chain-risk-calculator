@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -28,8 +29,14 @@ export default function StatsPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/stats/top-fanout").then((res) => res.json()),
-      fetch("/api/stats/most-dependents").then((res) => res.json()),
+      fetch("/api/stats/top-fanout").then(async (res) => {
+        if (res.ok === false) throw new Error("Could not load fan-out stats");
+        return res.json();
+      }),
+      fetch("/api/stats/most-dependents").then(async (res) => {
+        if (res.ok === false) throw new Error("Could not load dependents stats");
+        return res.json();
+      }),
     ])
       .then(([fanoutRows, dependentsRows]) => {
         setFanout(fanoutRows);
@@ -43,7 +50,14 @@ export default function StatsPage() {
   }, []);
 
   return (
-    <main className="mx-auto max-w-3xl space-y-8 px-6 py-16">
+    <main className="mx-auto max-w-5xl space-y-6 px-6 py-12">
+      <header>
+        <h1 className="text-2xl font-semibold">Ecosystem statistics</h1>
+        <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
+          Quick rankings for dependency fan-out and ecosystem blast radius.
+        </p>
+      </header>
+
       {loading ? (
         <Card>
           <CardContent>
@@ -58,49 +72,63 @@ export default function StatsPage() {
             <>
               <Card>
                 <CardHeader>
-                  <CardTitle>Top Packages by Dependency Count</CardTitle>
+                  <CardTitle>Highest direct fan-out</CardTitle>
+                  <CardDescription>
+                    Packages with the largest number of direct dependencies.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <table className="mb-8 w-full border-collapse text-left">
-                    <thead>
-                      <tr>
-                        <th>Package</th>
-                        <th>Num Dependencies</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {fanout.map((row) => (
-                        <tr key={row.package_name}>
-                          <td>{row.package_name}</td>
-                          <td>{row.num_dependencies}</td>
+                  <div className="table-wrap">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Package</th>
+                          <th className="text-right">Direct dependencies</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {fanout.map((row) => (
+                          <tr key={row.package_name}>
+                            <td className="font-medium">{row.package_name}</td>
+                            <td className="text-right tabular-nums">
+                              {Number(row.num_dependencies).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Most Depended-on Packages</CardTitle>
+                  <CardTitle>Most depended-on packages</CardTitle>
+                  <CardDescription>
+                    Packages with the most inbound dependency edges.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <table className="w-full border-collapse text-left">
-                    <thead>
-                      <tr>
-                        <th>Package</th>
-                        <th>Dependents</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dependents.map((row) => (
-                        <tr key={row.package_name}>
-                          <td>{row.package_name}</td>
-                          <td>{row.dependents}</td>
+                  <div className="table-wrap">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Package</th>
+                          <th className="text-right">Dependents</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {dependents.map((row) => (
+                          <tr key={row.package_name}>
+                            <td className="font-medium">{row.package_name}</td>
+                            <td className="text-right tabular-nums">
+                              {Number(row.dependents).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </CardContent>
               </Card>
             </>

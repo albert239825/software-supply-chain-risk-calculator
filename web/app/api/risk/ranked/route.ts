@@ -8,7 +8,7 @@ import { computeComposite, type RiskSignalRanges } from '../../../../lib/risk/sc
 // weights in SQL. SQL only materializes the per-package raw signals; the
 // score is computed in TS so A6 and R10 stay in lockstep.
 export async function GET(req: NextRequest) {
-  const sp = req.nextUrl.searchParams;
+  const sp = req.nextUrl?.searchParams ?? new URL(req.url).searchParams;
   let limit = Number.parseInt(sp.get('limit') ?? '25', 10);
   let offset = Number.parseInt(sp.get('offset') ?? '0', 10);
   if (!Number.isFinite(limit)) limit = 25;

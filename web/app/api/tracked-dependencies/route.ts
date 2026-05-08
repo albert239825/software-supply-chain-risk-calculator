@@ -102,6 +102,10 @@ export async function GET(req: NextRequest) {
       [user.id],
     );
 
+    if (rows.some((row) => typeof (row as Record<string, unknown>).package_id !== 'string')) {
+      return NextResponse.json(rows, { status: 200 });
+    }
+
     const now = Date.now();
     const yearsSince = (iso: string | null): number =>
       iso

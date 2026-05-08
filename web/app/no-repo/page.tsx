@@ -1,6 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { PageSpinner } from "@/components/ui/spinner";
 
 interface NoRepoRow {
@@ -15,7 +21,10 @@ export default function NoRepoPage() {
 
   useEffect(() => {
     fetch("/api/packages/no-repo")
-      .then((res) => res.json())
+      .then(async (res) => {
+        if (res.ok === false) throw new Error("Could not load packages without repositories");
+        return res.json();
+      })
       .then((rows) => {
         setData(rows);
         setLoading(false);
@@ -27,31 +36,43 @@ export default function NoRepoPage() {
   }, []);
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
+    <main className="mx-auto max-w-4xl space-y-6 px-6 py-12">
+      <header>
+        <h1 className="text-2xl font-semibold">Packages without repositories</h1>
+        <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
+          Versions with no repository metadata, which makes auditing harder.
+        </p>
+      </header>
+
       <Card>
         <CardHeader>
-          <CardTitle>Packages Without Repositories</CardTitle>
+          <CardTitle>Missing repository links</CardTitle>
+          <CardDescription>
+            These rows are useful for the repository-presence risk signal.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {loading && <PageSpinner label="Loading packages…" />}
-          {error && <div className="text-red-500">{error}</div>}
+          {error && <div className="text-destructive text-sm">{error}</div>}
           {!loading && !error && (
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr>
-                  <th>Package</th>
-                  <th>Version</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.map((row, i) => (
-                  <tr key={row.package_name + row.version + i}>
-                    <td>{row.package_name}</td>
-                    <td>{row.version}</td>
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Package</th>
+                    <th>Version</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {data.map((row, i) => (
+                    <tr key={row.package_name + row.version + i}>
+                      <td className="font-medium">{row.package_name}</td>
+                      <td className="font-mono text-xs">{row.version || "Unknown"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </CardContent>
       </Card>

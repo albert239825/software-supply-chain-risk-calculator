@@ -5,7 +5,7 @@ import { NextRequest } from 'next/server';
 export async function GET(_req: NextRequest) {
   try {
     const result = await pool.query(`
-      SELECT p.name AS package_name, v.version, v.released
+      SELECT p.id AS package_id, p.name AS package_name, v.version, v.released
       FROM packages p
       JOIN versions v ON p.id = v.package_id
       ORDER BY v.released DESC;

@@ -130,3 +130,25 @@
     @apply font-sans;
   }
 }
+
+@layer components {
+  .table-wrap {
+    @apply overflow-x-auto rounded-lg border;
+  }
+
+  .data-table {
+    @apply w-full border-collapse text-left text-sm;
+  }
+
+  .data-table th {
+    @apply border-b bg-muted/60 px-3 py-2 font-medium;
+  }
+
+  .data-table td {
+    @apply border-b px-3 py-2 align-top;
+  }
+
+  .data-table tbody tr {
+    @apply hover:bg-muted/30;
+  }
+}

@@ -237,7 +237,7 @@ export default function GraphExplorer() {
         </CardHeader>
         <CardContent className="space-y-6 overflow-visible">
           <div className="relative z-20 space-y-2">
-            <label className="text-muted-foreground text-xs leading-none font-medium tracking-wide uppercase">
+            <label className="text-muted-foreground text-xs leading-none font-medium uppercase">
               Find package
             </label>
 

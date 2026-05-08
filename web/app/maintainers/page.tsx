@@ -1,6 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { PageSpinner } from "@/components/ui/spinner";
 
 interface MaintainerRow {
@@ -15,7 +21,10 @@ export default function MaintainersPage() {
 
   useEffect(() => {
     fetch("/api/maintainers/top")
-      .then((res) => res.json())
+      .then(async (res) => {
+        if (res.ok === false) throw new Error("Could not load maintainers");
+        return res.json();
+      })
       .then((rows) => {
         setData(rows);
         setLoading(false);
@@ -27,31 +36,45 @@ export default function MaintainersPage() {
   }, []);
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
+    <main className="mx-auto max-w-4xl space-y-6 px-6 py-12">
+      <header>
+        <h1 className="text-2xl font-semibold">Maintainers</h1>
+        <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
+          Maintainers responsible for the largest number of packages in the dataset.
+        </p>
+      </header>
+
       <Card>
         <CardHeader>
-          <CardTitle>Top Maintainers</CardTitle>
+          <CardTitle>Top maintainers</CardTitle>
+          <CardDescription>
+            Concentration of package ownership can be a supply-chain risk signal.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {loading && <PageSpinner label="Loading maintainers…" />}
-          {error && <div className="text-red-500">{error}</div>}
+          {error && <div className="text-destructive text-sm">{error}</div>}
           {!loading && !error && (
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr>
-                  <th>Username</th>
-                  <th>Num Packages</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.map((row) => (
-                  <tr key={row.username}>
-                    <td>{row.username}</td>
-                    <td>{row.num_packages}</td>
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Username</th>
+                    <th className="text-right">Packages</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {data.map((row) => (
+                    <tr key={row.username}>
+                      <td className="font-medium">{row.username || "Unknown"}</td>
+                      <td className="text-right tabular-nums">
+                        {Number(row.num_packages).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </CardContent>
       </Card>

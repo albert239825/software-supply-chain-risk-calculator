@@ -38,19 +38,9 @@ function bucketClass(bucket: string) {
     return "border-red-200 bg-red-50 text-red-800";
   }
   if (bucket === "medium") {
-    return "border-yellow-200 bg-yellow-50 text-yellow-800";
+    return "border-amber-200 bg-amber-50 text-amber-800";
   }
-  return "border-green-200 bg-green-50 text-green-800";
-}
-
-function rowClass(bucket: string) {
-  if (bucket === "high") {
-    return "bg-red-50/35 hover:bg-red-50/65";
-  }
-  if (bucket === "medium") {
-    return "bg-yellow-50/35 hover:bg-yellow-50/65";
-  }
-  return "bg-green-50/25 hover:bg-green-50/55";
+  return "border-emerald-200 bg-emerald-50 text-emerald-800";
 }
 
 export default function RiskAnalysisPage() {
@@ -122,21 +112,19 @@ export default function RiskAnalysisPage() {
   }, [loadPage]);
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
+    <main className="mx-auto max-w-5xl px-6 py-12">
       <Card>
         <CardHeader>
           <CardTitle>Top risky packages</CardTitle>
           <CardDescription>
-            Sorted by composite risk score (high first). Use “Load more” for the
-            next page.
+            Sorted by composite risk score across maintainers, staleness,
+            dependency fan-out, dependent count, and repository metadata.
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {loading && <PageSpinner label="Loading rankings…" />}
-          {error && (
-            <div className="text-destructive text-sm">{error}</div>
-          )}
+          {loading && <PageSpinner label="Loading rankings..." />}
+          {error && <div className="text-destructive text-sm">{error}</div>}
 
           {!loading && !error && (
             <>
@@ -147,50 +135,33 @@ export default function RiskAnalysisPage() {
                 </p>
               ) : null}
 
-              <div className="overflow-x-auto rounded-lg border">
-                <table className="w-full border-collapse text-left text-sm">
-                  <thead className="bg-muted/60">
+              <div className="table-wrap">
+                <table className="data-table">
+                  <thead>
                     <tr>
-                      <th className="border-b px-3 py-2 font-medium">
-                        Package
-                      </th>
-                      <th className="border-b px-3 py-2 font-medium tabular-nums">
-                        Maintainers
-                      </th>
-                      <th className="border-b px-3 py-2 font-medium tabular-nums">
-                        Direct deps
-                      </th>
-                      <th className="border-b px-3 py-2 font-medium">
-                        Last release
-                      </th>
-                      <th className="border-b px-3 py-2 font-medium tabular-nums">
-                        Risk
-                      </th>
-                      <th className="border-b px-3 py-2 font-medium">Bucket</th>
+                      <th>Package</th>
+                      <th className="text-right tabular-nums">Maintainers</th>
+                      <th className="text-right tabular-nums">Direct deps</th>
+                      <th>Last release</th>
+                      <th className="text-right tabular-nums">Risk</th>
+                      <th>Bucket</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data.map((row) => (
-                      <tr key={row.package_id} className={rowClass(row.bucket)}>
-                        <td className="border-b px-3 py-2">{row.package_name}</td>
-
-                        <td className="border-b px-3 py-2 tabular-nums">
-                          {row.maintainers}
+                      <tr key={row.package_id}>
+                        <td className="font-medium">{row.package_name}</td>
+                        <td className="text-right tabular-nums">
+                          {Number(row.maintainers).toLocaleString()}
                         </td>
-
-                        <td className="border-b px-3 py-2 tabular-nums">
-                          {row.dependencies}
+                        <td className="text-right tabular-nums">
+                          {Number(row.dependencies).toLocaleString()}
                         </td>
-
-                        <td className="border-b px-3 py-2">
-                          {row.last_release?.slice(0, 10) ?? "—"}
-                        </td>
-
-                        <td className="border-b px-3 py-2 tabular-nums font-medium">
+                        <td>{row.last_release?.slice(0, 10) ?? "-"}</td>
+                        <td className="text-right tabular-nums font-medium">
                           {Number(row.risk_score).toFixed(2)}
                         </td>
-
-                        <td className="border-b px-3 py-2 capitalize">
+                        <td className="capitalize">
                           <span className={`inline-flex rounded-md border px-2 py-0.5 text-xs font-semibold ${bucketClass(row.bucket)}`}>
                             {row.bucket}
                           </span>
@@ -218,7 +189,7 @@ export default function RiskAnalysisPage() {
                   {loadingMore ? (
                     <span className="inline-flex items-center justify-center gap-2">
                       <Spinner size="sm" className="text-primary" />
-                      Loading…
+                      Loading...
                     </span>
                   ) : (
                     "Load more"

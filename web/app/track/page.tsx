@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Bell, Mail, Plus, Search, Trash2 } from "lucide-react";
+import { AlertTriangle, Mail, Plus, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -244,17 +244,16 @@ export default function TrackPage() {
 
   if (!user) {
     return (
-      <main className="mx-auto grid w-full max-w-6xl flex-1 gap-6 px-6 pb-16 pt-10 lg:grid-cols-[1fr_380px] lg:items-start">
-        <section className="flex flex-col gap-6">
-          <div className="inline-flex w-fit items-center gap-2 rounded-md border border-border bg-card px-3 py-1 text-sm font-medium text-muted-foreground">
-            <Bell className="size-4" />
+      <main className="mx-auto grid w-full max-w-6xl flex-1 gap-6 px-6 py-12 lg:grid-cols-[1fr_360px] lg:items-start">
+        <section className="flex flex-col gap-5">
+          <p className="text-muted-foreground text-sm font-medium uppercase">
             Personal watch lists
-          </div>
-          <div className="flex flex-col gap-4">
-            <h1 className="max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl">
+          </p>
+          <div className="flex flex-col gap-3">
+            <h1 className="max-w-3xl text-3xl font-semibold sm:text-4xl">
               Save the dependencies you want to keep an eye on.
             </h1>
-            <p className="max-w-2xl text-lg leading-8 text-muted-foreground">
+            <p className="max-w-2xl text-lg leading-7 text-muted-foreground">
               Sign in with Gmail or GitHub, then build a package watch list for
               future historical checks, alerts, and risk changes.
             </p>
@@ -265,7 +264,7 @@ export default function TrackPage() {
               ["Save", "Attach packages to your account."],
               ["Review", "Return to the same list later."],
             ].map(([title, copy]) => (
-              <div key={title} className="rounded-md border border-border bg-card p-4 shadow-sm">
+              <div key={title} className="rounded-md border border-border bg-card p-4">
                 <p className="font-semibold">{title}</p>
                 <p className="mt-1 text-sm leading-6 text-muted-foreground">{copy}</p>
               </div>
@@ -273,7 +272,7 @@ export default function TrackPage() {
           </div>
         </section>
 
-        <Card className="border-border bg-card shadow-sm">
+        <Card>
           <CardHeader>
             <CardTitle className="text-2xl">Log in</CardTitle>
             <CardDescription className="leading-6">
@@ -295,28 +294,27 @@ export default function TrackPage() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 pb-16 pt-10">
-      <header className="rounded-lg border border-border bg-card p-6 shadow-sm">
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-12">
+      <header>
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div className="flex flex-col gap-2">
-            <div className="inline-flex w-fit items-center gap-2 rounded-md bg-secondary px-3 py-1 text-sm font-semibold text-secondary-foreground">
-              <Bell className="size-4" />
+            <div className="text-muted-foreground text-sm font-medium uppercase">
               {tracked.length} tracked
             </div>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            <h1 className="text-3xl font-semibold sm:text-4xl">
               Tracked dependencies
             </h1>
             <p className="text-muted-foreground">
               Signed in as {user.displayName || user.email || "your account"}.
             </p>
           </div>
-          <div className="rounded-md border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+          <div className="rounded-md border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
             Watch-list changes are saved to your account.
           </div>
         </div>
       </header>
 
-      <Card className="border-border bg-card shadow-sm">
+      <Card>
         <CardHeader>
           <CardTitle>Import from GitHub</CardTitle>
           <CardDescription>
@@ -382,7 +380,7 @@ export default function TrackPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border bg-card shadow-sm">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Search className="size-5 text-primary" />
@@ -425,7 +423,7 @@ export default function TrackPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border bg-card shadow-sm">
+      <Card>
         <CardHeader>
           <CardTitle>Your watch list</CardTitle>
           <CardDescription>
