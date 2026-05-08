@@ -19,7 +19,7 @@ npm install
 cp .env.example .env.local
 ```
 
-Edit `web/.env.local` and set at least **`NEXT_PUBLIC_SUPABASE_URL`** and **`NEXT_PUBLIC_SUPABASE_ANON_KEY`** (and matching `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` if your API routes need server-side access). Without Supabase, the UI may load but **search and DB-backed APIs** will not work; `GET /api/health` will report the database as unconfigured until credentials are present.
+Edit `web/.env.local` and set at least **`NEXT_PUBLIC_SUPABASE_URL`** and **`NEXT_PUBLIC_SUPABASE_ANON_KEY`** (the supabase is in our report)
 
 ```bash
 npm run dev
