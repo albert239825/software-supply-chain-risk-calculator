@@ -9,7 +9,6 @@ import {
   Mail,
   PackageSearch,
   Search,
-  ShieldCheck,
 } from "lucide-react";
 import {
   Card,
@@ -30,35 +29,29 @@ type User = {
 
 const modules = [
   {
-    name: "Browse packages",
-    blurb: "Start from the package catalog and review versions by release date.",
+    name: "Packages",
+    blurb: "Browse package records.",
     href: "/packages",
     icon: PackageSearch,
   },
   {
-    name: "Rank risk",
-    blurb: "Compare packages using the composite risk score and supporting signals.",
+    name: "Risk",
+    blurb: "Compare risk scores.",
     href: "/risk",
     icon: Activity,
   },
   {
-    name: "Explore dependencies",
-    blurb: "Open the graph explorer to inspect direct and transitive dependency paths.",
+    name: "Graph",
+    blurb: "Explore dependency paths.",
     href: "/graph",
     icon: GitBranch,
   },
   {
-    name: "Track over time",
-    blurb: "Save packages from search or import them from GitHub repositories.",
+    name: "Tracked",
+    blurb: "Manage your watch list.",
     href: "/track",
     icon: Bell,
   },
-];
-
-const workflow = [
-  "Find a package in the database.",
-  "Review its maintainers, versions, repo status, and dependency graph.",
-  "Save high-priority dependencies to your personal tracking list.",
 ];
 
 export default function Home() {
@@ -93,104 +86,70 @@ export default function Home() {
 
   if (!user) {
     return (
-      <main className="mx-auto grid w-full max-w-6xl flex-1 gap-6 px-6 pb-16 pt-10 lg:grid-cols-[1fr_380px] lg:items-start">
-        <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
-          <div className="flex flex-col gap-5">
-            <div className="inline-flex w-fit items-center gap-2 rounded-md border border-border bg-muted/50 px-3 py-1 text-sm font-medium text-muted-foreground">
-              <ShieldCheck className="size-4" />
-              Software supply-chain risk calculator
-            </div>
-            <div className="flex flex-col gap-3">
-              <h1 className="max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl">
-                Log in to track dependency risk across projects.
-              </h1>
-              <p className="max-w-2xl text-lg leading-8 text-muted-foreground">
-                Sign in with Gmail or GitHub to save dependencies, import
-                packages from GitHub repositories, and revisit your watch list.
-              </p>
-            </div>
+      <main className="mx-auto flex w-full max-w-5xl flex-1 items-center px-6 pb-16 pt-10">
+        <section className="grid w-full gap-6 lg:grid-cols-[1fr_360px] lg:items-center">
+          <div className="flex flex-col gap-3">
+            <p className="text-sm font-medium text-muted-foreground">
+              Software Supply Chain Risk Scorer
+            </p>
+            <h1 className="max-w-2xl text-4xl font-semibold tracking-tight sm:text-5xl">
+              Keep an eye on the dependencies that matter.
+            </h1>
+            <p className="max-w-xl text-lg leading-8 text-muted-foreground">
+              Sign in to save packages, import from GitHub, and return to your
+              watch list anytime.
+            </p>
           </div>
-        </section>
 
-        <Card className="border-border bg-card shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-2xl">Log in</CardTitle>
-            <CardDescription>
-              Choose an account to start using the app.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-3">
-            <Button size="lg" onClick={() => login("google")}>
-              <Mail />
-              Continue with Gmail
-            </Button>
-            <Button size="lg" variant="outline" onClick={() => login("github")}>
-              Continue with GitHub
-            </Button>
-          </CardContent>
-        </Card>
+          <Card className="border-border bg-card shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-2xl">Log in</CardTitle>
+              <CardDescription>
+                Choose how you want to continue.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3">
+              <Button size="lg" onClick={() => login("google")}>
+                <Mail />
+                Continue with Gmail
+              </Button>
+              <Button size="lg" variant="outline" onClick={() => login("github")}>
+                Continue with GitHub
+              </Button>
+            </CardContent>
+          </Card>
+        </section>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 pb-16 pt-10">
-      <section className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
-          <div className="flex flex-col gap-5">
-            <div className="inline-flex w-fit items-center gap-2 rounded-md border border-border bg-muted/50 px-3 py-1 text-sm font-medium text-muted-foreground">
-              <ShieldCheck className="size-4" />
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 pb-16 pt-10">
+      <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
+        <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-medium text-muted-foreground">
               Signed in as {user.displayName || user.email || "your account"}
-            </div>
-            <div className="flex flex-col gap-3">
-              <h1 className="max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl">
-                Evaluate dependency risk from package data you already collected.
-              </h1>
-              <p className="max-w-2xl text-lg leading-8 text-muted-foreground">
-                Use the app to inspect packages, compare risk signals, explore
-                dependency paths, and save the dependencies each user wants to
-                track.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Button asChild size="lg">
-                <Link href="/packages">
-                  <Search />
-                  Browse packages
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="lg">
-                <Link href="/track">
-                  <Bell />
-                  Track dependencies
-                </Link>
-              </Button>
-            </div>
+            </p>
+            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+              Dependency risk dashboard
+            </h1>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Button asChild>
+              <Link href="/track">
+                <Bell />
+                Track dependencies
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/packages">
+                <Search />
+                Browse packages
+              </Link>
+            </Button>
           </div>
         </div>
-
-        <Card className="border-border bg-card shadow-sm">
-          <CardHeader>
-            <CardTitle>Typical workflow</CardTitle>
-            <CardDescription>
-              The main path through the risk review tools.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ol className="grid gap-3">
-              {workflow.map((step, index) => (
-                <li key={step} className="flex gap-3">
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-secondary text-sm font-semibold text-secondary-foreground">
-                    {index + 1}
-                  </span>
-                  <span className="text-sm leading-6 text-muted-foreground">
-                    {step}
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </CardContent>
-        </Card>
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
