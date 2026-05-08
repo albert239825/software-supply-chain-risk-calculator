@@ -1,33 +1,105 @@
 # Software Supply Chain Risk Scorer
 
-A web app that lets security teams explore the NPM package ecosystem via an interactive dependency graph and a composite risk score, backed by a normalized PostgreSQL database (Supabase) populated from the NPM registry.
+## Description
 
-This repo has two pieces:
+This project helps teams reason about **software supply chain risk** for open-source dependencies. We made a  **Next.js** web app that provides search, package detail, an interactive **dependency graph**, and **risk-style signals** over ecosystem data stored in **Supabase** (PostgreSQL). For the data cleaning and accumulaton, we also have a separate **Python pipeline** (`collect_data.py`) can fetch **NPM** and/or **PyPI** metadata and dependency graphs from public APIs, then write **normalized CSVs** (`data/clean/`) suitable for loading into your database. Together, the pieces support exploring how packages connect in the wild and comparing candidates with more context than a single version string.
 
-1. **Python data collection** (`collect_data.py`, `src/`, `data/`) — the scraper that produces the raw and clean CSVs we load into Supabase.
-2. **Web application** (`web/`) — a Next.js 14+ App Router app (TypeScript, Tailwind, shadcn/ui, Supabase client) that consumes the data and serves the UI + API routes.
+---
 
-See [`docs/PLAN.md`](docs/PLAN.md) for scope, milestones, and open decisions, and [`docs/api-spec.md`](docs/api-spec.md) for the v1 API contract.
+Instructions to run the code: 
+## Run locally
+
+You need **Node.js** (a current LTS, e.g. 20+) for the web app and **Python 3.11+** if you want to run data collection.
+
+### 1) Web application
+
+```bash
+cd web
+npm install
+cp .env.example .env.local
+```
+
+Edit `web/.env.local` and set at least **`NEXT_PUBLIC_SUPABASE_URL`** and **`NEXT_PUBLIC_SUPABASE_ANON_KEY`** (and matching `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` if your API routes need server-side access). Without Supabase, the UI may load but **search and DB-backed APIs** will not work; `GET /api/health` will report the database as unconfigured until credentials are present.
+
+```bash
+npm run dev
+```
+
+Open **http://localhost:3000** (dev server uses port **3000** by default). Useful checks:
+
+- `http://localhost:3000/api/health` — liveness; includes DB status when configured.
+
+### 2) Data collection (optional)
+
+Generates `data/raw/<run_id>/…` and `data/clean/*.csv` without touching the web app.
+
+**Conda (recommended)**
+
+```bash
+conda env create -f environment.yml
+conda activate cis5500
+python collect_data.py --npm --pypi --top-n 50
+```
+
+**pip**
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+python collect_data.py --npm --pypi --top-n 50
+```
+
+Use `--npm` and/or `--pypi`. See [Python data collection](#python-data-collection-collect_datapy) below for flags and output layout.
+
+---
+
+## Repository layout
+
+1. **`web/`** — Next.js App Router app (TypeScript, Tailwind, shadcn/ui, Supabase client): UI and API routes.
+2. **Root + `src/`** — Python collectors and CSV cleaning used by `collect_data.py`.
+
+See [`docs/PLAN.md`](docs/PLAN.md) for scope and milestones, and [`docs/api-spec.md`](docs/api-spec.md) for the v1 API contract.
 
 ---
 
 ## Web application (`web/`)
 
-Next.js 14+ App Router, TypeScript (strict), Tailwind CSS, shadcn/ui, and `@supabase/supabase-js`.
-
-```bash
-cd web
-npm install
-cp .env.example .env.local   # fill in your Supabase credentials
-npm run dev
-```
-
-Then open:
-
-- `http://localhost:3000` — landing page
-- `http://localhost:3000/api/health` — A8 liveness/readiness probe (returns `db: "unconfigured"` until Supabase credentials are set in `.env.local`)
+Next.js App Router, TypeScript (strict), Tailwind CSS, shadcn/ui, and `@supabase/supabase-js`. The [Run locally](#run-locally) section covers install, env, dev server, and basic URLs; what follows adds auth, scripts, and API details.
 
 Supabase credentials live in `web/.env.local` (gitignored). See `web/.env.example` for the required variable names.
+
+### Authenticated dependency tracking
+
+The web app supports Gmail and GitHub OAuth login plus a per-user dependency watch list. Before using it:
+
+1. Run [`web/db/auth-tracking.sql`](web/db/auth-tracking.sql) in the Supabase SQL editor.
+2. Add `SUPABASE_DB_URL` and `AUTH_REDIRECT_BASE_URL=http://localhost:3000` to `web/.env.local` or `web/.env`.
+3. Create OAuth apps for the providers you want to enable:
+   - Google: open Google Auth Platform Clients, create a **Web application** client, add authorized redirect URI `http://localhost:3000/api/auth/callback/google`, then copy the client ID and secret into `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+   - GitHub: open GitHub Developer settings → OAuth Apps → New OAuth App, set homepage URL `http://localhost:3000`, set authorization callback URL `http://localhost:3000/api/auth/callback/github`, then copy the client ID and secret into `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`.
+4. Restart `npm run dev`, then visit `http://localhost:3000/track`. The page shows which providers are configured and enables the login buttons when ready.
+
+Once configured, users can sign in from the nav or `http://localhost:3000/track` and manage tracked packages. The auth/tracking API is:
+
+| Route | Purpose |
+|---|---|
+| `GET /api/auth/me` | Current session user |
+| `POST /api/auth/logout` | End the current session |
+| `GET /api/tracked-dependencies` | List the signed-in user's tracked packages |
+| `POST /api/tracked-dependencies` | Track `{ "packageId": "..." }` |
+| `DELETE /api/tracked-dependencies/:packageId` | Stop tracking a package |
+| `GET /api/github/repos` | List repositories for the signed-in GitHub user |
+| `POST /api/github/repos/import` | Import tracked dependencies from supported repo dependency files |
+
+If your auth tables already exist, run these additions before using GitHub import:
+
+```sql
+ALTER TABLE user_auth_identities
+  ADD COLUMN IF NOT EXISTS provider_access_token text;
+
+ALTER TABLE user_auth_identities
+  ADD COLUMN IF NOT EXISTS provider_scopes text;
+```
 
 Common scripts:
 
@@ -49,15 +121,7 @@ Phase 0 ships three template routes end-to-end (contract in [`docs/api-spec.md`]
 - **A7** `GET /api/stats/counts?ecosystem=<npm|pypi>`
 - **A8** `GET /api/health`
 
-To hit them against real data:
-
-```bash
-cd web
-cp .env.example .env.local          # fill in Supabase creds
-npm run dev                          # serves on http://localhost:3000
-```
-
-Then in another terminal:
+With `npm run dev` already running (see [Run locally](#run-locally)), in another terminal:
 
 ```bash
 curl -sS http://localhost:3000/api/health | jq .
@@ -78,21 +142,7 @@ Fetches NPM and/or PyPI package metadata and dependency graphs in two stages:
 
 `--out` (default `data`) is the only output root; the script creates `raw/` and `clean/` under it. One command runs collection and then the clean step.
 
-### Setup
-
-**Conda (recommended)**
-
-```bash
-conda env create -f environment.yml
-conda activate cis5500
-```
-
-**pip only**
-
-```bash
-python3 -m venv .venv && source .venv/bin/activate   # optional
-pip install -r requirements.txt
-```
+Environment setup is summarized under **Run locally → 2) Data collection** above; use **conda** (`environment.yml`) or **pip** (`requirements.txt`) as you prefer.
 
 ### Run
 
