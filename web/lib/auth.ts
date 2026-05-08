@@ -11,6 +11,8 @@ export type CurrentUser = {
   email: string | null;
   displayName: string | null;
   avatarUrl: string | null;
+  authProviders?: AuthProvider[];
+  hasGitHubAccess?: boolean;
 };
 
 export type OAuthProfile = {
@@ -208,17 +210,29 @@ export async function getCurrentUser(req: Request): Promise<CurrentUser | null> 
     email: string | null;
     display_name: string | null;
     avatar_url: string | null;
+    auth_providers: AuthProvider[] | null;
+    has_github_access: boolean | null;
   }>(
     `
     SELECT
       u.id AS user_id,
       u.email,
       u.display_name,
-      u.avatar_url
+      u.avatar_url,
+      COALESCE(
+        array_remove(array_agg(DISTINCT i.provider), NULL),
+        ARRAY[]::text[]
+      ) AS auth_providers,
+      COALESCE(
+        bool_or(i.provider = 'github' AND i.provider_access_token IS NOT NULL),
+        false
+      ) AS has_github_access
     FROM user_sessions s
     JOIN users u ON u.id = s.user_id
+    LEFT JOIN user_auth_identities i ON i.user_id = u.id
     WHERE s.token_hash = $1
       AND s.expires_at > now()
+    GROUP BY u.id, u.email, u.display_name, u.avatar_url
     LIMIT 1;
     `,
     [hashToken(token)],
@@ -239,6 +253,8 @@ export async function getCurrentUser(req: Request): Promise<CurrentUser | null> 
     email: row.email,
     displayName: row.display_name,
     avatarUrl: row.avatar_url,
+    authProviders: row.auth_providers ?? [],
+    hasGitHubAccess: Boolean(row.has_github_access),
   };
 }
 

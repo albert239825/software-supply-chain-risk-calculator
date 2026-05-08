@@ -55,5 +55,7 @@ describe("TrackPage", () => {
       await screen.findByRole("heading", { name: /tracked dependencies/i }),
     ).toBeInTheDocument();
     expect(screen.getByText(/signed in as me/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /load github repos/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /log in with github/i })).toBeInTheDocument();
   });
 });

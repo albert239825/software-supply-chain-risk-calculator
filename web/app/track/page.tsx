@@ -13,6 +13,8 @@ type User = {
   email: string | null;
   displayName: string | null;
   avatarUrl: string | null;
+  authProviders?: string[];
+  hasGitHubAccess?: boolean;
 };
 
 type SearchRow = {
@@ -88,6 +90,7 @@ export default function TrackPage() {
     () => new Set(tracked.map((row) => row.package_id)),
     [tracked],
   );
+  const hasGitHubLogin = user?.hasGitHubAccess ?? false;
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -193,6 +196,10 @@ export default function TrackPage() {
   }
 
   async function loadRepos() {
+    if (!hasGitHubLogin) {
+      return;
+    }
+
     setReposLoading(true);
     setMessage(null);
     const res = await fetch("/api/github/repos");
@@ -209,7 +216,7 @@ export default function TrackPage() {
   }
 
   async function importRepoDependencies() {
-    if (!selectedRepo) {
+    if (!selectedRepo || !hasGitHubLogin) {
       return;
     }
 
@@ -327,7 +334,7 @@ export default function TrackPage() {
               type="button"
               variant="outline"
               onClick={loadRepos}
-              disabled={reposLoading}
+              disabled={reposLoading || !hasGitHubLogin}
             >
               {reposLoading ? "Loading repos..." : "Load GitHub repos"}
             </Button>
@@ -335,7 +342,7 @@ export default function TrackPage() {
               value={selectedRepo}
               onChange={(event) => setSelectedRepo(event.target.value)}
               className="h-9 min-w-0 flex-1 rounded-lg border border-input bg-background px-3 text-sm"
-              disabled={repos.length === 0}
+              disabled={!hasGitHubLogin || repos.length === 0}
             >
               {repos.length === 0 ? (
                 <option value="">No repositories loaded</option>
@@ -351,11 +358,23 @@ export default function TrackPage() {
             <Button
               type="button"
               onClick={importRepoDependencies}
-              disabled={!selectedRepo || importingRepo}
+              disabled={!hasGitHubLogin || !selectedRepo || importingRepo}
             >
               {importingRepo ? "Importing..." : "Import dependencies"}
             </Button>
           </div>
+          {!hasGitHubLogin && (
+            <p className="text-sm text-muted-foreground">
+              <button
+                type="button"
+                className="font-medium text-primary underline-offset-4 hover:underline"
+                onClick={() => login("github")}
+              >
+                Log in with GitHub
+              </button>{" "}
+              to load repositories.
+            </p>
+          )}
 
           {importResult && (
             <div className="rounded-md border border-border bg-muted/40 p-4 text-sm">
