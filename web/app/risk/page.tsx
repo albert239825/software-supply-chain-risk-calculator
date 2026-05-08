@@ -112,7 +112,7 @@ export default function RiskAnalysisPage() {
   }, [loadPage]);
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-12">
+    <main className="mx-auto w-full max-w-none px-6 py-12">
       <Card>
         <CardHeader>
           <CardTitle>Top risky packages</CardTitle>

@@ -214,7 +214,7 @@ export default function GraphExplorer() {
   const edgeSummary = explorer ? `${explorer.edges.length} edge rows (hops ≤ 2)` : '';
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 px-6 py-16">
+    <main className="mx-auto w-full max-w-none space-y-6 px-6 py-16">
       <Card className="relative z-10 overflow-visible">
         <CardHeader>
           <CardTitle>Graph Explorer</CardTitle>

@@ -37,7 +37,7 @@ export default function AbandonedPage() {
   }, []);
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6 px-6 py-12">
+    <main className="mx-auto w-full max-w-none space-y-6 px-6 py-12">
       <header>
         <h1 className="text-2xl font-semibold">Abandoned but popular</h1>
         <p className="text-muted-foreground mt-2 max-w-2xl text-sm">

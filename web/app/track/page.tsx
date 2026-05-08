@@ -234,7 +234,7 @@ export default function TrackPage() {
 
   if (authLoading) {
     return (
-      <main className="mx-auto max-w-3xl px-6 py-20">
+      <main className="mx-auto w-full max-w-none px-6 py-20">
         <div className="rounded-lg border border-border bg-card p-8 shadow-sm">
           <PageSpinner label="Checking account..." />
         </div>
@@ -244,7 +244,7 @@ export default function TrackPage() {
 
   if (!user) {
     return (
-      <main className="mx-auto grid w-full max-w-6xl flex-1 gap-6 px-6 py-12 lg:grid-cols-[1fr_360px] lg:items-start">
+      <main className="mx-auto grid w-full max-w-none flex-1 gap-6 px-6 py-12 lg:grid-cols-[1fr_360px] lg:items-start">
         <section className="flex flex-col gap-5">
           <p className="text-muted-foreground text-sm font-medium uppercase">
             Personal watch lists
@@ -294,7 +294,7 @@ export default function TrackPage() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-12">
+    <main className="mx-auto flex w-full max-w-none flex-1 flex-col gap-6 px-6 py-12">
       <header>
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div className="flex flex-col gap-2">

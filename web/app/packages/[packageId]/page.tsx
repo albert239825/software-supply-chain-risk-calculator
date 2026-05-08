@@ -137,7 +137,7 @@ export default function PackageDetailPage() {
   }, [packageId]);
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 px-6 py-12">
+    <main className="mx-auto w-full max-w-none space-y-6 px-6 py-12">
       {loading && (
         <Card>
           <CardContent>
