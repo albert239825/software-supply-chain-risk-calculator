@@ -2,8 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import {
+  createDependencySets,
   extractPackageJsonDependencies,
+  extractPackageLockDependencies,
+  extractPyprojectDependencies,
+  extractRequirementsDependencies,
+  findDependencyManifestPaths,
   fetchPackageJson,
+  fetchRepoFileText,
   getGitHubAccessToken,
 } from '@/lib/github';
 
@@ -41,15 +47,60 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'valid repo fullName is required' }, { status: 400 });
     }
 
-    const packageJson = await fetchPackageJson(token, fullName);
-    const dependencyNames = extractPackageJsonDependencies(packageJson);
+    const manifests = await findDependencyManifestPaths(token, fullName);
 
-    if (dependencyNames.length === 0) {
+    if (manifests.length === 0) {
       return NextResponse.json({
         repo: fullName,
+        manifests: [],
         total: 0,
         matched: [],
         unmatched: [],
+        message: 'No supported dependency files found in this repository.',
+      });
+    }
+
+    const dependencies = createDependencySets();
+    for (const manifest of manifests) {
+      if (manifest.kind === 'package.json') {
+        const packageJson = await fetchPackageJson(token, fullName, manifest.path);
+        for (const dependencyName of extractPackageJsonDependencies(packageJson)) {
+          dependencies.npm.add(dependencyName);
+        }
+        continue;
+      }
+
+      if (manifest.kind === 'package-lock.json') {
+        const lockfile = await fetchPackageJson(token, fullName, manifest.path);
+        for (const dependencyName of extractPackageLockDependencies(lockfile)) {
+          dependencies.npm.add(dependencyName);
+        }
+        continue;
+      }
+
+      const text = await fetchRepoFileText(token, fullName, manifest.path);
+      const extracted =
+        manifest.kind === 'requirements.txt'
+          ? extractRequirementsDependencies(text)
+          : extractPyprojectDependencies(text);
+
+      for (const dependencyName of extracted) {
+        dependencies.pypi.add(dependencyName);
+      }
+    }
+
+    const npmDependencies = [...dependencies.npm].sort((a, b) => a.localeCompare(b));
+    const pypiDependencies = [...dependencies.pypi].sort((a, b) => a.localeCompare(b));
+    const totalDependencies = npmDependencies.length + pypiDependencies.length;
+
+    if (totalDependencies === 0) {
+      return NextResponse.json({
+        repo: fullName,
+        manifests: manifests.map((manifest) => manifest.path),
+        total: 0,
+        matched: [],
+        unmatched: [],
+        message: 'Dependency files were found, but no dependencies were listed.',
       });
     }
 
@@ -74,11 +125,17 @@ export async function POST(req: NextRequest) {
           LIMIT 1
         ) AS latest_version_id
       FROM packages p
-      WHERE p.ecosystem = 'npm'
-        AND lower(p.name) = ANY($1::text[])
+      WHERE (
+          p.ecosystem = 'npm'
+          AND lower(p.name) = ANY($1::text[])
+        )
+        OR (
+          p.ecosystem = 'pypi'
+          AND lower(p.name) = ANY($2::text[])
+        )
       ORDER BY p.name ASC;
       `,
-      [dependencyNames],
+      [npmDependencies, pypiDependencies],
     );
 
     if (matched.length > 0) {
@@ -100,12 +157,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const matchedNames = new Set(matched.map((row) => row.package_name.toLowerCase()));
-    const unmatched = dependencyNames.filter((name) => !matchedNames.has(name));
+    const matchedKeys = new Set(
+      matched.map((row) => `${row.ecosystem}:${row.package_name.toLowerCase()}`),
+    );
+    const unmatched = [
+      ...npmDependencies
+        .filter((name) => !matchedKeys.has(`npm:${name}`))
+        .map((name) => `npm:${name}`),
+      ...pypiDependencies
+        .filter((name) => !matchedKeys.has(`pypi:${name}`))
+        .map((name) => `pypi:${name}`),
+    ];
 
     return NextResponse.json({
       repo: fullName,
-      total: dependencyNames.length,
+      manifests: manifests.map((manifest) => manifest.path),
+      total: totalDependencies,
       matched,
       unmatched,
     });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Bell, Mail, Plus, Search, Trash2 } from "lucide-react";
+import { AlertTriangle, Bell, Mail, Plus, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +33,15 @@ type TrackedRow = {
   description: string | null;
   latest_version: string;
   latest_version_id: string | null;
+  last_release: string | null;
+  has_repository: boolean;
+  maintainer_count: number;
+  fanout_direct: number;
+  fanin_dependents: number;
+  staleness_years: number;
+  risk_score: number;
+  risk_bucket: "low" | "medium" | "high";
+  checked_at: string;
 };
 
 type GitHubRepo = {
@@ -47,6 +56,7 @@ type GitHubRepo = {
 
 type GitHubImportResult = {
   repo: string;
+  manifests: string[];
   total: number;
   matched: Array<{
     package_id: string;
@@ -56,6 +66,7 @@ type GitHubImportResult = {
     latest_version_id: string | null;
   }>;
   unmatched: string[];
+  message?: string;
 };
 
 export default function TrackPage() {
@@ -309,7 +320,7 @@ export default function TrackPage() {
         <CardHeader>
           <CardTitle>Import from GitHub</CardTitle>
           <CardDescription>
-            Load a repository package.json and track dependencies that exist in this app.
+            Scan supported dependency files and track packages that exist in this app.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
@@ -354,6 +365,13 @@ export default function TrackPage() {
                 Imported {importResult.matched.length} of {importResult.total} dependencies from{" "}
                 {importResult.repo}.
               </p>
+              <p className="mt-1 text-muted-foreground">
+                Scanned {importResult.manifests.length} dependency file
+                {importResult.manifests.length === 1 ? "" : "s"}.
+              </p>
+              {importResult.message && (
+                <p className="mt-1 text-muted-foreground">{importResult.message}</p>
+              )}
               {importResult.unmatched.length > 0 && (
                 <p className="mt-1 text-muted-foreground">
                   {importResult.unmatched.length} dependencies were not in the local package database.
@@ -429,14 +447,35 @@ export default function TrackPage() {
             {tracked.map((row) => (
               <div
                 key={row.id}
-                className="flex items-start justify-between gap-4 rounded-md border border-border bg-background p-4 shadow-sm"
+                className={`flex items-start justify-between gap-4 rounded-md border p-4 shadow-sm ${riskCardClass(row.risk_bucket)}`}
               >
                 <div className="min-w-0">
-                  <p className="truncate text-lg font-semibold">{row.package_name}</p>
-                  <p className="text-muted-foreground text-sm">
-                    {row.ecosystem} &middot; {row.latest_version} &middot; added{" "}
-                    {row.created_at.slice(0, 10)}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate text-lg font-semibold">{row.package_name}</p>
+                    <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${riskBadgeClass(row.risk_bucket)}`}>
+                      {row.risk_bucket} risk
+                    </span>
+                  </div>
+                  <p className="mt-1 text-muted-foreground text-sm">
+                    {row.ecosystem} &middot; {row.latest_version} &middot; score{" "}
+                    {Math.round(row.risk_score * 100)}%
                   </p>
+                  <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+                    <StatusPill label="Maintainers" value={String(row.maintainer_count)} />
+                    <StatusPill label="Dependencies" value={String(row.fanout_direct)} />
+                    <StatusPill label="Dependents" value={String(row.fanin_dependents)} />
+                    <StatusPill
+                      label="Last release"
+                      value={row.last_release ? row.last_release.slice(0, 10) : "unknown"}
+                    />
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {row.staleness_years >= 2 && (
+                      <SignalFlag>Stale release history</SignalFlag>
+                    )}
+                    {!row.has_repository && <SignalFlag>No repository metadata</SignalFlag>}
+                    {row.maintainer_count <= 1 && <SignalFlag>Low maintainer count</SignalFlag>}
+                  </div>
                   {row.description && (
                     <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
                       {row.description}
@@ -450,6 +489,9 @@ export default function TrackPage() {
                       Open graph
                     </Link>
                   )}
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Last checked {new Date(row.checked_at).toLocaleString()}
+                  </p>
                 </div>
                 <Button
                   aria-label={`Remove ${row.package_name}`}
@@ -466,5 +508,42 @@ export default function TrackPage() {
         </CardContent>
       </Card>
     </main>
+  );
+}
+
+function riskCardClass(bucket: TrackedRow["risk_bucket"]) {
+  if (bucket === "high") {
+    return "border-red-200 bg-red-50/50";
+  }
+  if (bucket === "medium") {
+    return "border-amber-200 bg-amber-50/50";
+  }
+  return "border-emerald-200 bg-emerald-50/40";
+}
+
+function riskBadgeClass(bucket: TrackedRow["risk_bucket"]) {
+  if (bucket === "high") {
+    return "bg-red-100 text-red-800";
+  }
+  if (bucket === "medium") {
+    return "bg-amber-100 text-amber-800";
+  }
+  return "bg-emerald-100 text-emerald-800";
+}
+
+function StatusPill({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="rounded-md border border-border bg-background/70 px-2 py-1">
+      <span className="font-medium text-foreground">{label}:</span> {value}
+    </span>
+  );
+}
+
+function SignalFlag({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-md bg-background/75 px-2 py-1 text-xs font-medium text-muted-foreground">
+      <AlertTriangle className="size-3 text-amber-600" />
+      {children}
+    </span>
   );
 }
