@@ -41,8 +41,8 @@ describe("Home page", () => {
     expect(
       screen.getAllByRole("link", { name: /browse packages/i })[0],
     ).toHaveAttribute("href", "/packages");
-    expect(screen.getAllByRole("link", { name: /Open$/ }).length).toBeGreaterThan(
-      0,
-    );
+    expect(
+      screen.getAllByRole("link", { name: /open →/i }).length,
+    ).toBeGreaterThan(0);
   });
 });

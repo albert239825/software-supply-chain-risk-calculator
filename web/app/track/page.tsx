@@ -241,67 +241,74 @@ export default function TrackPage() {
 
   if (authLoading) {
     return (
-      <main className="mx-auto w-full max-w-none px-6 py-20">
-        <div className="rounded-lg border border-border bg-card p-8 shadow-sm">
-          <PageSpinner label="Checking account..." />
-        </div>
-      </main>
-    );
-  }
-
-  if (!user) {
-    return (
-      <main className="mx-auto grid w-full max-w-none flex-1 gap-6 px-6 py-12 lg:grid-cols-[1fr_360px] lg:items-start">
-        <section className="flex flex-col gap-5">
-          <p className="text-muted-foreground text-sm font-medium uppercase">
-            Personal watch lists
-          </p>
-          <div className="flex flex-col gap-3">
-            <h1 className="max-w-3xl text-3xl font-semibold sm:text-4xl">
-              Save the dependencies you want to keep an eye on.
-            </h1>
-            <p className="max-w-2xl text-lg leading-7 text-muted-foreground">
-              Sign in with Gmail or GitHub, then build a package watch list for
-              future historical checks, alerts, and risk changes.
-            </p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {[
-              ["Search", "Find packages already loaded in the DB."],
-              ["Save", "Attach packages to your account."],
-              ["Review", "Return to the same list later."],
-            ].map(([title, copy]) => (
-              <div key={title} className="rounded-md border border-border bg-card p-4">
-                <p className="font-semibold">{title}</p>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">{copy}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">Log in</CardTitle>
-            <CardDescription className="leading-6">
-              Use your Gmail or GitHub account to save tracked dependencies.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-3">
-            <Button size="lg" onClick={() => login("google")}>
-              <Mail />
-              Continue with Gmail
-            </Button>
-            <Button size="lg" variant="outline" onClick={() => login("github")}>
-              Continue with GitHub
-            </Button>
+      <main className="mx-auto flex w-full max-w-lg flex-1 justify-center px-6 py-20">
+        <Card className="w-full border-border shadow-sm">
+          <CardContent className="p-8">
+            <PageSpinner label="Checking account..." />
           </CardContent>
         </Card>
       </main>
     );
   }
 
+  if (!user) {
+    return (
+      <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-12 lg:py-16">
+        <div className="grid items-start gap-10 lg:grid-cols-2 lg:gap-12">
+          <section className="flex flex-col gap-5">
+            <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">
+              Personal watch lists
+            </p>
+            <div className="flex flex-col gap-3">
+              <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
+                Save the dependencies you want to keep an eye on.
+              </h1>
+              <p className="text-muted-foreground text-pretty max-w-xl text-base leading-relaxed sm:text-lg">
+                Sign in with Gmail or GitHub, then build a package watch list for
+                future historical checks, alerts, and risk changes.
+              </p>
+            </div>
+          </section>
+
+          <Card className="border-border shadow-sm lg:sticky lg:top-24">
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-2xl">Log in</CardTitle>
+              <CardDescription className="text-base leading-relaxed">
+                Use your Gmail or GitHub account to save tracked dependencies.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3">
+              <Button size="lg" onClick={() => login("google")}>
+                <Mail />
+                Continue with Gmail
+              </Button>
+              <Button size="lg" variant="outline" onClick={() => login("github")}>
+                Continue with GitHub
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="mt-12 grid gap-3 sm:grid-cols-3">
+          {[
+            ["Search", "Find packages already loaded in the DB."],
+            ["Save", "Attach packages to your account."],
+            ["Review", "Return to the same list later."],
+          ].map(([title, copy]) => (
+            <Card key={title} className="border-border shadow-sm">
+              <CardHeader className="pb-3 pt-4">
+                <CardTitle className="text-base">{title}</CardTitle>
+                <CardDescription className="text-sm leading-snug">{copy}</CardDescription>
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      </main>
+    );
+  }
+
   return (
-    <main className="mx-auto flex w-full max-w-none flex-1 flex-col gap-6 px-6 py-12">
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-12 lg:py-16">
       <header>
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div className="flex flex-col gap-2">
