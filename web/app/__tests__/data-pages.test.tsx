@@ -1,5 +1,5 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import PackagesPage from "@/app/packages/page";
 import StatsPage from "@/app/stats/page";
@@ -14,6 +14,10 @@ describe("data-driven pages", () => {
   beforeEach(() => {
     fetchMock.mockReset();
     vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("PackagesPage lists rows from /api/packages/all", async () => {
@@ -66,6 +70,86 @@ describe("data-driven pages", () => {
     render(<RiskAnalysisPage />);
     expect(await screen.findByText("lodash")).toBeInTheDocument();
     expect(screen.getByText(/medium/i)).toBeInTheDocument();
+  });
+
+  it("RiskAnalysisPage loads additional rows and bucket variants", async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          items: [
+            {
+              package_id: "high",
+              package_name: "risky",
+              maintainers: 1,
+              dependencies: 1000,
+              last_release: null,
+              risk_score: 0.91,
+              bucket: "high",
+            },
+          ],
+          total: 2,
+          limit: 30,
+          offset: 0,
+          hasMore: true,
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          items: [
+            {
+              package_id: "low",
+              package_name: "steady",
+              maintainers: 8,
+              dependencies: 1,
+              last_release: "2026-01-01T00:00:00Z",
+              risk_score: 0.12,
+              bucket: "low",
+            },
+          ],
+          total: 2,
+          limit: 30,
+          offset: 1,
+          hasMore: false,
+        }),
+      } as Response);
+
+    render(<RiskAnalysisPage />);
+
+    expect(await screen.findByText("risky")).toBeInTheDocument();
+    expect(screen.getByText("high")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /load more/i }));
+    expect(await screen.findByText("steady")).toBeInTheDocument();
+    expect(screen.getByText("low")).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenLastCalledWith("/api/risk/ranked?limit=30&offset=1");
+  });
+
+  it("RiskAnalysisPage renders API errors and empty states", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => ({ error: "database unavailable" }),
+    } as Response);
+
+    const { unmount } = render(<RiskAnalysisPage />);
+    expect(await screen.findByText("database unavailable")).toBeInTheDocument();
+    unmount();
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        items: [],
+        total: 0,
+        limit: 30,
+        offset: 0,
+        hasMore: false,
+      }),
+    } as Response);
+
+    render(<RiskAnalysisPage />);
+    expect(await screen.findByText(/No packages returned/i)).toBeInTheDocument();
   });
 
   it("AbandonedPage renders API rows", async () => {
