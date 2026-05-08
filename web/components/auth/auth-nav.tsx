@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { LogOut } from "lucide-react";
+import { LogOut, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type User = {
@@ -32,6 +32,10 @@ export function AuthNav() {
     window.location.href = "/";
   }
 
+  function login(provider: "google" | "github") {
+    window.location.href = `/api/auth/${provider}`;
+  }
+
   if (loading) {
     return null;
   }
@@ -39,8 +43,12 @@ export function AuthNav() {
   if (!user) {
     return (
       <div className="ml-auto flex items-center gap-2">
-        <Button asChild variant="outline" size="sm">
-          <Link href="/track">Set up login</Link>
+        <Button variant="outline" size="sm" onClick={() => login("google")}>
+          <Mail />
+          Gmail
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => login("github")}>
+          GitHub
         </Button>
       </div>
     );

@@ -4,6 +4,7 @@ import {
   Bell,
   GitBranch,
   PackageSearch,
+  Search,
   ShieldCheck,
 } from "lucide-react";
 import {
@@ -15,112 +16,114 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-const pages = [
+const modules = [
   {
-    name: "Risk Analysis",
-    blurb: "Rank packages by composite supply-chain risk and inspect weak signals.",
-    href: "/risk",
-    icon: Activity,
-    color: "bg-red-50 text-red-700 border-red-100",
-  },
-  {
-    name: "Graph Explorer",
-    blurb: "Trace transitive dependency paths from a package seed.",
-    href: "/graph",
-    icon: GitBranch,
-    color: "bg-cyan-50 text-cyan-700 border-cyan-100",
-  },
-  {
-    name: "Tracked Dependencies",
-    blurb: "Sign in and save packages you want to monitor over time.",
-    href: "/track",
-    icon: Bell,
-    color: "bg-amber-50 text-amber-800 border-amber-100",
-  },
-  {
-    name: "Package Browser",
-    blurb: "Review versions, release dates, maintainers, and repo metadata.",
+    name: "Browse packages",
+    blurb: "Start from the package catalog and review versions by release date.",
     href: "/packages",
     icon: PackageSearch,
-    color: "bg-indigo-50 text-indigo-700 border-indigo-100",
+  },
+  {
+    name: "Rank risk",
+    blurb: "Compare packages using the composite risk score and supporting signals.",
+    href: "/risk",
+    icon: Activity,
+  },
+  {
+    name: "Explore dependencies",
+    blurb: "Open the graph explorer to inspect direct and transitive dependency paths.",
+    href: "/graph",
+    icon: GitBranch,
+  },
+  {
+    name: "Track over time",
+    blurb: "Log in and save the packages you want to revisit later.",
+    href: "/track",
+    icon: Bell,
   },
 ];
 
-const stats = [
-  { label: "Risk signals", value: "5" },
-  { label: "Core SQL views", value: "10" },
-  { label: "Tracked lists", value: "User" },
+const workflow = [
+  "Find a package in the database.",
+  "Review its maintainers, versions, repo status, and dependency graph.",
+  "Save high-priority dependencies to your personal tracking list.",
 ];
 
 export default function Home() {
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 pb-16 pt-10">
-      <section className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-        <div className="flex flex-col gap-6">
-          <div className="inline-flex w-fit items-center gap-2 rounded-md border border-border bg-card px-3 py-1 text-sm font-medium text-muted-foreground">
-            <ShieldCheck className="size-4" />
-            Dependency intelligence for security reviews
-          </div>
-          <div className="flex flex-col gap-4">
-            <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-              Software supply-chain risk, mapped before it surprises you.
-            </h1>
-            <p className="max-w-2xl text-lg leading-8 text-muted-foreground">
-              Explore package metadata, dependency graph structure, maintainer
-              concentration, release staleness, and saved watch lists from one
-              normalized PostgreSQL-backed app.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Button asChild size="lg">
-              <Link href="/track">
-                <Bell />
-                Track dependencies
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="lg">
-              <Link href="/graph">Open graph explorer</Link>
-            </Button>
+      <section className="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
+          <div className="flex flex-col gap-5">
+            <div className="inline-flex w-fit items-center gap-2 rounded-md border border-border bg-muted/50 px-3 py-1 text-sm font-medium text-muted-foreground">
+              <ShieldCheck className="size-4" />
+              Software supply-chain risk calculator
+            </div>
+            <div className="flex flex-col gap-3">
+              <h1 className="max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl">
+                Evaluate dependency risk from package data you already collected.
+              </h1>
+              <p className="max-w-2xl text-lg leading-8 text-muted-foreground">
+                Use the app to inspect packages, compare risk signals, explore
+                dependency paths, and save the dependencies each user wants to
+                track.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button asChild size="lg">
+                <Link href="/packages">
+                  <Search />
+                  Browse packages
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="lg">
+                <Link href="/track">
+                  <Bell />
+                  Track dependencies
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
 
-        <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
-          <div className="grid gap-4">
-            <div className="grid grid-cols-3 gap-3">
-              {stats.map((stat) => (
-                <div key={stat.label} className="rounded-md border border-border bg-background p-3">
-                  <p className="text-2xl font-semibold text-foreground">{stat.value}</p>
-                  <p className="mt-1 text-xs font-medium text-muted-foreground">{stat.label}</p>
-                </div>
+        <Card className="border-border bg-card shadow-sm">
+          <CardHeader>
+            <CardTitle>Typical workflow</CardTitle>
+            <CardDescription>
+              The main path through the risk review tools.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ol className="grid gap-3">
+              {workflow.map((step, index) => (
+                <li key={step} className="flex gap-3">
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-secondary text-sm font-semibold text-secondary-foreground">
+                    {index + 1}
+                  </span>
+                  <span className="text-sm leading-6 text-muted-foreground">{step}</span>
+                </li>
               ))}
-            </div>
-            <div className="rounded-md border border-border bg-muted/50 p-4">
-              <p className="text-sm font-semibold text-foreground">Watch-list ready</p>
-              <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                Sign in with Gmail or GitHub, choose packages, and persist the
-                dependencies each user wants to track.
-              </p>
-            </div>
-          </div>
-        </div>
+            </ol>
+          </CardContent>
+        </Card>
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {pages.map((page) => {
-          const Icon = page.icon;
+        {modules.map((module) => {
+          const Icon = module.icon;
           return (
-            <Link key={page.name} href={page.href} className="group">
+            <Link key={module.name} href={module.href} className="group">
               <Card className="h-full border-border bg-card shadow-sm transition-colors hover:border-primary/40">
                 <CardHeader>
-                  <div className={`mb-3 flex size-10 items-center justify-center rounded-lg border ${page.color}`}>
+                  <div className="mb-3 flex size-10 items-center justify-center rounded-md border border-border bg-muted/50 text-primary">
                     <Icon className="size-5" />
                   </div>
-                  <CardTitle className="text-lg">{page.name}</CardTitle>
-                  <CardDescription className="leading-6">{page.blurb}</CardDescription>
+                  <CardTitle className="text-lg">{module.name}</CardTitle>
+                  <CardDescription className="leading-6">{module.blurb}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <span className="text-sm font-semibold text-primary group-hover:underline">
-                    Open module
+                    Open
                   </span>
                 </CardContent>
               </Card>
