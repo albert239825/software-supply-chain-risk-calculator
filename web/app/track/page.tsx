@@ -85,6 +85,7 @@ export default function TrackPage() {
   const [reposLoading, setReposLoading] = useState(false);
   const [importingRepo, setImportingRepo] = useState(false);
   const [importResult, setImportResult] = useState<GitHubImportResult | null>(null);
+  const [clearingAll, setClearingAll] = useState(false);
 
   const trackedIds = useMemo(
     () => new Set(tracked.map((row) => row.package_id)),
@@ -193,6 +194,41 @@ export default function TrackPage() {
       return;
     }
     setTracked((rows) => rows.filter((row) => row.package_id !== packageId));
+  }
+
+  async function clearAllTracked() {
+    if (tracked.length === 0) {
+      return;
+    }
+
+    const ok = window.confirm(
+      "Remove all packages from your watch list? This cannot be undone.",
+    );
+    if (!ok) {
+      return;
+    }
+
+    setClearingAll(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/tracked-dependencies", {
+        method: "DELETE",
+      });
+      const body = (await res.json()) as { error?: string; deleted?: number };
+      if (!res.ok) {
+        setMessage(body.error || "Could not clear watch list");
+        return;
+      }
+      setTracked([]);
+      const n = body.deleted ?? 0;
+      setMessage(
+        n === 0
+          ? "Watch list was already empty."
+          : `Removed ${n} package${n === 1 ? "" : "s"} from your watch list.`,
+      );
+    } finally {
+      setClearingAll(false);
+    }
   }
 
   async function loadRepos() {
@@ -450,11 +486,27 @@ export default function TrackPage() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Your watch list</CardTitle>
-          <CardDescription>
-            Packages saved here can be used for historical checks and alerts later.
-          </CardDescription>
+        <CardHeader className="flex flex-col gap-4 space-y-0 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1.5">
+            <CardTitle>Your watch list</CardTitle>
+            <CardDescription>
+              Packages saved here can be used for historical checks and alerts later.
+            </CardDescription>
+          </div>
+          {tracked.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              className="shrink-0 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              disabled={clearingAll || trackedLoading}
+              aria-label={
+                clearingAll ? "Clearing tracked packages" : "Clear all tracked packages"
+              }
+              onClick={() => void clearAllTracked()}
+            >
+              {clearingAll ? "Clearing…" : "Clear all"}
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {message && <p className="mb-4 text-sm text-muted-foreground">{message}</p>}

@@ -176,6 +176,25 @@ export async function GET(req: NextRequest) {
   }
 }
 
+export async function DELETE(req: NextRequest) {
+  try {
+    const user = await getCurrentUser(req);
+    if (!user) {
+      return NextResponse.json({ error: 'login required' }, { status: 401 });
+    }
+
+    const result = await pool.query(
+      `DELETE FROM user_tracked_dependencies WHERE user_id = $1`,
+      [user.id],
+    );
+
+    const deleted = result.rowCount ?? 0;
+    return NextResponse.json({ deleted }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser(req);

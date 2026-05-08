@@ -9,7 +9,7 @@ vi.mock("@/lib/auth", () => ({
   getCurrentUser: vi.fn(),
 }));
 
-import { GET, POST } from "@/app/api/tracked-dependencies/route";
+import { DELETE, GET, POST } from "@/app/api/tracked-dependencies/route";
 import { getCurrentUser } from "@/lib/auth";
 import pool from "@/lib/db";
 
@@ -127,6 +127,35 @@ describe("/api/tracked-dependencies", () => {
     const res = await POST(req);
     expect(res.status).toBe(400);
     expect(pool.query).not.toHaveBeenCalled();
+  });
+
+  it("DELETE 401 when not logged in", async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue(null);
+    const res = await DELETE(new NextRequest("http://x"));
+    expect(res.status).toBe(401);
+    expect(pool.query).not.toHaveBeenCalled();
+  });
+
+  it("DELETE 200 clears all tracked rows for user", async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      id: "u1",
+      email: null,
+      displayName: null,
+      avatarUrl: null,
+    });
+    vi.mocked(pool.query).mockResolvedValueOnce({
+      rows: [],
+      rowCount: 5,
+    } as never);
+
+    const res = await DELETE(new NextRequest("http://x"));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { deleted: number };
+    expect(body.deleted).toBe(5);
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("DELETE FROM user_tracked_dependencies"),
+      ["u1"],
+    );
   });
 
   it("POST 201 persists a tracked dependency", async () => {
