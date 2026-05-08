@@ -32,11 +32,40 @@ describe("/api/tracked-dependencies", () => {
       displayName: null,
       avatarUrl: null,
     });
-    vi.mocked(pool.query).mockResolvedValueOnce({ rows: [{ id: "t1" }] } as never);
+    vi.mocked(pool.query).mockResolvedValueOnce({
+      rows: [
+        {
+          id: "t1",
+          package_id: "p1",
+          note: null,
+          created_at: "2020-01-01T00:00:00.000Z",
+          updated_at: "2020-01-01T00:00:00.000Z",
+          package_name: "left-pad",
+          ecosystem: "npm",
+          description: null,
+          latest_version: "1.0.0",
+          latest_version_id: "vid",
+          last_release: "2020-06-01T00:00:00.000Z",
+          has_repository: true,
+          maintainer_count: "1",
+          fanout_direct: "0",
+          fanin_dependents: "0",
+        },
+      ],
+    } as never);
     const res = await GET(new NextRequest("http://x"));
     expect(res.status).toBe(200);
-    const body = (await res.json()) as unknown[];
-    expect(body).toEqual([{ id: "t1" }]);
+    const body = (await res.json()) as Array<{
+      id: string;
+      risk_score: number;
+      risk_bucket: string;
+      checked_at: string;
+    }>;
+    expect(body).toHaveLength(1);
+    expect(body[0].id).toBe("t1");
+    expect(body[0].risk_bucket).toMatch(/low|medium|high/);
+    expect(typeof body[0].risk_score).toBe("number");
+    expect(body[0].checked_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
   it("POST 401 when not logged in", async () => {

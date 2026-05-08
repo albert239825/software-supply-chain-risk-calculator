@@ -7,6 +7,7 @@ vi.mock("@/lib/db", () => ({
 import pool from "@/lib/db";
 import {
   SESSION_COOKIE,
+  createSession,
   deleteSession,
   getCurrentUser,
   hashToken,
@@ -74,5 +75,16 @@ describe("auth session (mocked pool)", () => {
       }),
     );
     expect(vi.mocked(pool.query).mock.calls[0][1]).toEqual([hashToken(token)]);
+  });
+
+  it("createSession inserts a session and returns the opaque token", async () => {
+    vi.mocked(pool.query).mockResolvedValueOnce({ rows: [] } as never);
+    const token = await createSession("user-99");
+    expect(token.length).toBeGreaterThan(20);
+    expect(vi.mocked(pool.query).mock.calls[0][1]).toEqual([
+      "user-99",
+      hashToken(token),
+      30,
+    ]);
   });
 });

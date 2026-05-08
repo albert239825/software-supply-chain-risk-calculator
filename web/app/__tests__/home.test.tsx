@@ -1,6 +1,6 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/link", () => ({
   default: ({
@@ -15,10 +15,26 @@ vi.mock("next/link", () => ({
 import Home from "@/app/page";
 
 describe("Home page", () => {
-  it("highlights the main workflow and navigation cards", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        json: async () => ({
+          user: {
+            id: "u1",
+            email: "viewer@example.com",
+            displayName: "Viewer",
+            avatarUrl: null,
+          },
+        }),
+      } as Response),
+    );
+  });
+
+  it("highlights the main workflow and navigation cards", async () => {
     render(<Home />);
     expect(
-      screen.getByRole("heading", {
+      await screen.findByRole("heading", {
         name: /evaluate dependency risk/i,
       }),
     ).toBeInTheDocument();
