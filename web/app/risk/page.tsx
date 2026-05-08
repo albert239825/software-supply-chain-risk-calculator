@@ -33,6 +33,26 @@ type RankedResponse =
     }
   | { error?: string };
 
+function bucketClass(bucket: string) {
+  if (bucket === "high") {
+    return "border-red-200 bg-red-50 text-red-800";
+  }
+  if (bucket === "medium") {
+    return "border-yellow-200 bg-yellow-50 text-yellow-800";
+  }
+  return "border-green-200 bg-green-50 text-green-800";
+}
+
+function rowClass(bucket: string) {
+  if (bucket === "high") {
+    return "bg-red-50/35 hover:bg-red-50/65";
+  }
+  if (bucket === "medium") {
+    return "bg-yellow-50/35 hover:bg-yellow-50/65";
+  }
+  return "bg-green-50/25 hover:bg-green-50/55";
+}
+
 export default function RiskAnalysisPage() {
   const [data, setData] = useState<RiskRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -151,7 +171,7 @@ export default function RiskAnalysisPage() {
                   </thead>
                   <tbody>
                     {data.map((row) => (
-                      <tr key={row.package_id} className="hover:bg-muted/30">
+                      <tr key={row.package_id} className={rowClass(row.bucket)}>
                         <td className="border-b px-3 py-2">{row.package_name}</td>
 
                         <td className="border-b px-3 py-2 tabular-nums">
@@ -171,7 +191,9 @@ export default function RiskAnalysisPage() {
                         </td>
 
                         <td className="border-b px-3 py-2 capitalize">
-                          {row.bucket}
+                          <span className={`inline-flex rounded-md border px-2 py-0.5 text-xs font-semibold ${bucketClass(row.bucket)}`}>
+                            {row.bucket}
+                          </span>
                         </td>
                       </tr>
                     ))}
