@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { readJsonObject } from '@/lib/api/validation';
 import {
   createDependencySets,
   extractPackageJsonDependencies,
@@ -23,6 +24,9 @@ function normalizeFullName(value: unknown): string | null {
   }
 
   const trimmed = value.trim();
+  if (trimmed.length > 160) {
+    return null;
+  }
   return /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(trimmed) ? trimmed : null;
 }
 
@@ -41,7 +45,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const body = (await req.json()) as ImportBody;
+    const parsed = await readJsonObject(req);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
+
+    const body = parsed.data as ImportBody;
     const fullName = normalizeFullName(body.fullName);
     if (!fullName) {
       return NextResponse.json({ error: 'valid repo fullName is required' }, { status: 400 });

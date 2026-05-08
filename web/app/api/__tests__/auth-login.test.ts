@@ -17,6 +17,22 @@ describe("POST /api/auth/login", () => {
     expect(res.status).toBe(400);
   });
 
+  it("400 when body is malformed JSON", async () => {
+    const res = await POST(
+      new NextRequest("http://localhost/api/auth/login", {
+        method: "POST",
+        body: "{",
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("400 when body is not a JSON object", async () => {
+    const res = await POST(jsonReq(["me@gmail.com", "octocat"]));
+    expect(res.status).toBe(400);
+  });
+
   it("400 when email invalid", async () => {
     const res = await POST(
       jsonReq({ email: "not-an-email", githubUsername: "octocat" }),

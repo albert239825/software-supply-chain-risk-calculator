@@ -1,10 +1,16 @@
 import pool from '../../../../lib/db';
 import { NextRequest } from 'next/server';
+import { parseBoundedIntegerParam } from '@/lib/api/validation';
 
 // GET /api/stats/depth-below?n=3
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const n = parseInt(searchParams.get('n') || '3', 10);
+  const parsedDepth = parseBoundedIntegerParam(searchParams, 'n', 3, 1, 32);
+  if (!parsedDepth.ok) {
+    return new Response(JSON.stringify({ error: parsedDepth.error }), { status: 400 });
+  }
+
+  const n = parsedDepth.value;
   try {
     const result = await pool.query(`
       WITH RECURSIVE resolved_edges AS (

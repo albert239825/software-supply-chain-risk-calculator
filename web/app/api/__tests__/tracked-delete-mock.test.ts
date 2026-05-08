@@ -41,6 +41,20 @@ describe("DELETE /api/tracked-dependencies/:packageId", () => {
     expect(res.status).toBe(404);
   });
 
+  it("400 when packageId is blank", async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      id: "u1",
+      email: null,
+      displayName: null,
+      avatarUrl: null,
+    });
+    const res = await DELETE(new NextRequest("http://x"), {
+      params: Promise.resolve({ packageId: "   " }),
+    });
+    expect(res.status).toBe(400);
+    expect(pool.query).not.toHaveBeenCalled();
+  });
+
   it("200 when a row is removed", async () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: "u1",

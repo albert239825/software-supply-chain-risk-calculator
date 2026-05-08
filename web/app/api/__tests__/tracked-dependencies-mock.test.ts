@@ -95,6 +95,40 @@ describe("/api/tracked-dependencies", () => {
     expect(res.status).toBe(400);
   });
 
+  it("POST 400 when body is malformed JSON", async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      id: "u1",
+      email: null,
+      displayName: null,
+      avatarUrl: null,
+    });
+    const req = new NextRequest("http://x", {
+      method: "POST",
+      body: "{",
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    expect(pool.query).not.toHaveBeenCalled();
+  });
+
+  it("POST 400 when packageId is blank", async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      id: "u1",
+      email: null,
+      displayName: null,
+      avatarUrl: null,
+    });
+    const req = new NextRequest("http://x", {
+      method: "POST",
+      body: JSON.stringify({ packageId: "   " }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    expect(pool.query).not.toHaveBeenCalled();
+  });
+
   it("POST 201 persists a tracked dependency", async () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: "u1",

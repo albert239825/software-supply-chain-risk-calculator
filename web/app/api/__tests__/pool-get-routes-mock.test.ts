@@ -51,6 +51,13 @@ describe("GET routes backed by pool (mocked)", () => {
     expect(res.status).toBe(200);
   });
 
+  it("/api/stats/depth-below rejects invalid n", async () => {
+    const { GET } = await import("@/app/api/stats/depth-below/route");
+    const res = await GET(new NextRequest("http://x?n=abc"));
+    expect(res.status).toBe(400);
+    expect(pool.query).not.toHaveBeenCalled();
+  });
+
   it("/api/maintainers/top", async () => {
     vi.mocked(pool.query).mockResolvedValueOnce({ rows: [] } as never);
     const { GET } = await import("@/app/api/maintainers/top/route");
@@ -130,6 +137,15 @@ describe("GET routes backed by pool (mocked)", () => {
     expect(res.status).toBe(200);
   });
 
+  it("/api/packages/:id/versions rejects blank packageId", async () => {
+    const { GET } = await import("@/app/api/packages/[packageId]/versions/route");
+    const res = await GET(new NextRequest("http://x"), {
+      params: Promise.resolve({ packageId: "   " }),
+    });
+    expect(res.status).toBe(400);
+    expect(pool.query).not.toHaveBeenCalled();
+  });
+
   it("/api/packages/:id/maintainers", async () => {
     vi.mocked(pool.query).mockResolvedValueOnce({ rows: [] } as never);
     const { GET } = await import("@/app/api/packages/[packageId]/maintainers/route");
@@ -164,6 +180,16 @@ describe("GET routes backed by pool (mocked)", () => {
       2,
       3,
     ]);
+  });
+
+  it("/api/packages/:id/graph rejects invalid query params", async () => {
+    const { GET } = await import("@/app/api/packages/[packageId]/graph/route");
+    const res = await GET(
+      new NextRequest("http://x?maxDepth=0&maxOrder=3"),
+      pkgCtx,
+    );
+    expect(res.status).toBe(400);
+    expect(pool.query).not.toHaveBeenCalled();
   });
 
   it("propagates SQL errors as 500", async () => {

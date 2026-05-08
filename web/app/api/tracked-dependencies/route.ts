@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import {
+  invalidPathIdMessage,
+  normalizePathId,
+  readJsonObject,
+} from '@/lib/api/validation';
 import { computeComposite, type RiskSignalRanges } from '@/lib/risk/score';
 
 type TrackBody = {
@@ -178,9 +183,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'login required' }, { status: 401 });
     }
 
-    const body = (await req.json()) as TrackBody;
-    if (typeof body.packageId !== 'string' || body.packageId.length === 0) {
-      return NextResponse.json({ error: 'packageId is required' }, { status: 400 });
+    const parsed = await readJsonObject(req);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
+
+    const body = parsed.data as TrackBody;
+    const packageId = normalizePathId(body.packageId);
+    if (!packageId) {
+      return NextResponse.json({ error: invalidPathIdMessage('packageId') }, { status: 400 });
     }
 
     const note = normalizeNote(body.note);
@@ -194,7 +205,7 @@ export async function POST(req: NextRequest) {
         updated_at = now()
       RETURNING id, package_id, note, created_at, updated_at;
       `,
-      [user.id, body.packageId, note],
+      [user.id, packageId, note],
     );
 
     return NextResponse.json(rows[0], { status: 201 });

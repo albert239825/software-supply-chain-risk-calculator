@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { invalidPathIdMessage, normalizePathId } from '@/lib/api/validation';
 
 type RouteContext = {
   params: Promise<{ packageId: string }>;
@@ -13,7 +14,12 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
       return NextResponse.json({ error: 'login required' }, { status: 401 });
     }
 
-    const { packageId } = await ctx.params;
+    const params = await ctx.params;
+    const packageId = normalizePathId(params.packageId);
+    if (!packageId) {
+      return NextResponse.json({ error: invalidPathIdMessage('packageId') }, { status: 400 });
+    }
+
     const { rowCount } = await pool.query(
       `
       DELETE FROM user_tracked_dependencies

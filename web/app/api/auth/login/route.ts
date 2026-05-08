@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { readJsonObject } from '@/lib/api/validation';
 import {
   applySessionCookie,
   createOrUpdateUserFromOAuth,
@@ -31,7 +32,12 @@ function normalizeGitHubUsername(value: unknown): string | null {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as LoginBody;
+    const parsed = await readJsonObject(req);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
+
+    const body = parsed.data as LoginBody;
     const email = normalizeEmail(body.email);
     const githubUsername = normalizeGitHubUsername(body.githubUsername);
 

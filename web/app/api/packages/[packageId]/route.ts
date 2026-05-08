@@ -1,5 +1,6 @@
 import pool from '../../../../lib/db';
 import { NextRequest } from 'next/server';
+import { invalidPathIdMessage, normalizePathId } from '@/lib/api/validation';
 
 // GET /api/packages/:packageId
 // A2: Single-package metadata + latest-version enrichment fields.
@@ -7,7 +8,14 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ packageId: string }> },
 ) {
-  const { packageId } = await params;
+  const routeParams = await params;
+  const packageId = normalizePathId(routeParams.packageId);
+  if (!packageId) {
+    return new Response(JSON.stringify({ error: invalidPathIdMessage('packageId') }), {
+      status: 400,
+    });
+  }
+
   try {
     const result = await pool.query(
       `

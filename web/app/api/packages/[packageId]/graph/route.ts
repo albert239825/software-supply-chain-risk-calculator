@@ -1,19 +1,36 @@
 import pool from '../../../../../lib/db';
 import { NextRequest } from 'next/server';
+import {
+  invalidPathIdMessage,
+  normalizePathId,
+  parseBoundedIntegerParam,
+} from '@/lib/api/validation';
 
 // GET /api/packages/:packageId/graph?maxDepth=4&maxOrder=2
 // :packageId is the root **versions.id**. maxOrder caps outbound hop depth shown (1=direct deps only).
 export async function GET(req: NextRequest, context: { params: Promise<{ packageId: string }> }) {
-  const { packageId } = await context.params;
+  const routeParams = await context.params;
+  const packageId = normalizePathId(routeParams.packageId);
+  if (!packageId) {
+    return new Response(JSON.stringify({ error: invalidPathIdMessage('packageId') }), {
+      status: 400,
+    });
+  }
+
   const { searchParams } = new URL(req.url);
 
-  let maxDepth = parseInt(searchParams.get('maxDepth') || '4', 10);
-  if (!Number.isFinite(maxDepth)) maxDepth = 4;
-  maxDepth = Math.min(Math.max(maxDepth, 1), 32);
+  const maxDepthParam = parseBoundedIntegerParam(searchParams, 'maxDepth', 4, 1, 32);
+  if (!maxDepthParam.ok) {
+    return new Response(JSON.stringify({ error: maxDepthParam.error }), { status: 400 });
+  }
 
-  let maxOrder = parseInt(searchParams.get('maxOrder') || '2', 10);
-  if (!Number.isFinite(maxOrder)) maxOrder = 2;
-  maxOrder = Math.min(Math.max(maxOrder, 1), 4);
+  const maxOrderParam = parseBoundedIntegerParam(searchParams, 'maxOrder', 2, 1, 4);
+  if (!maxOrderParam.ok) {
+    return new Response(JSON.stringify({ error: maxOrderParam.error }), { status: 400 });
+  }
+
+  const maxDepth = maxDepthParam.value;
+  const maxOrder = maxOrderParam.value;
 
   try {
     const result = await pool.query(
